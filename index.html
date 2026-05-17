@@ -1,0 +1,3790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VDCertify</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#2563eb', dark: '#1d4ed8', light: '#eff6ff', muted: '#dbeafe' }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    /* Base */
+    [x-cloak] { display: none !important; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; }
+
+    /* Sidebar links */
+    .sidebar-link {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+      font-size: 0.875rem; font-weight: 500; color: #475569;
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+      text-decoration: none;
+    }
+    .sidebar-link:hover { background: #f1f5f9; color: #0f172a; }
+    .sidebar-link.active { background: #eff6ff; color: #2563eb; }
+
+    /* Stat card */
+    .stat-card {
+      background: #fff; border-radius: 0.75rem;
+      border: 1px solid #e2e8f0; padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 0.25rem;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 1rem; background: #2563eb; color: #fff;
+      font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem;
+      border: none; cursor: pointer; transition: background 0.15s;
+      text-decoration: none;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:focus { outline: 2px solid #2563eb; outline-offset: 2px; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 1rem; background: #fff; border: 1px solid #cbd5e1;
+      color: #334155; font-size: 0.875rem; font-weight: 500;
+      border-radius: 0.5rem; cursor: pointer; transition: background 0.15s;
+      text-decoration: none;
+    }
+    .btn-secondary:hover { background: #f8fafc; }
+    .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-danger {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 1rem; background: #fef2f2; border: 1px solid #fecaca;
+      color: #dc2626; font-size: 0.875rem; font-weight: 500;
+      border-radius: 0.5rem; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-danger:hover { background: #fee2e2; }
+    .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Form inputs */
+    .input {
+      width: 100%; padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+      border: 1px solid #cbd5e1; font-size: 0.875rem; color: #0f172a;
+      background: #fff; transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+    .input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+    .input:disabled { background: #f8fafc; color: #94a3b8; }
+    textarea.input { resize: none; }
+    select.input { appearance: auto; }
+
+    .label { display: block; font-size: 0.875rem; font-weight: 500; color: #334155; margin-bottom: 0.25rem; }
+
+    /* Badges */
+    .badge-active, .badge-inactive, .badge-pending,
+    .badge-processing, .badge-completed, .badge-failed {
+      display: inline-flex; align-items: center;
+      padding: 0.125rem 0.6rem; border-radius: 9999px;
+      font-size: 0.75rem; font-weight: 500;
+    }
+    .badge-active    { background: #dcfce7; color: #15803d; }
+    .badge-inactive  { background: #f1f5f9; color: #64748b; }
+    .badge-pending   { background: #fef3c7; color: #b45309; }
+    .badge-processing{ background: #dbeafe; color: #1d4ed8; }
+    .badge-completed { background: #dcfce7; color: #15803d; }
+    .badge-failed    { background: #fee2e2; color: #dc2626; }
+
+    /* Card */
+    .card { background: #fff; border-radius: 0.75rem; border: 1px solid #e2e8f0; padding: 1.25rem; }
+
+    /* Table */
+    .th {
+      padding: 0.75rem 1rem; text-align: left;
+      font-size: 0.75rem; font-weight: 600; color: #64748b;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .td { padding: 0.75rem 1rem; font-size: 0.875rem; color: #334155; }
+    .tr { border-bottom: 1px solid #f1f5f9; transition: background 0.1s; }
+    .tr:hover { background: #f8fafc; }
+
+    /* Spinner */
+    .spinner { width: 1rem; height: 1rem; animation: spin 0.75s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 40; display: flex; align-items: center;
+      justify-content: center; padding: 1rem;
+    }
+    .modal-box {
+      background: #fff; border-radius: 1rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      width: 100%; max-width: 32rem; z-index: 50;
+      display: flex; flex-direction: column; max-height: 90vh;
+    }
+    .modal-box-lg {
+      background: #fff; border-radius: 1rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      width: 100%; max-width: 42rem; z-index: 50;
+      display: flex; flex-direction: column; max-height: 90vh;
+    }
+
+    /* Section title */
+    .section-title { font-size: 1.125rem; font-weight: 700; color: #0f172a; }
+
+    /* ───── Submitted Jobs design (ported from templates/index.html) ───── */
+    :root {
+      --jt-navy:#0d1b3e; --jt-blue:#2563eb; --jt-blue-lite:#3b82f6;
+      --jt-sky:#e8f0fe; --jt-sky-deep:#c7d9fd;
+      --jt-off-white:#f7f9ff; --jt-border:#dde4f0;
+      --jt-slate:#64748b; --jt-slate-lite:#94a3b8; --jt-ink:#0f172a; --jt-ink-soft:#334155;
+      --jt-green:#10b981; --jt-green-bg:#ecfdf5;
+      --jt-amber:#f59e0b; --jt-amber-bg:#fffbeb;
+      --jt-red:#ef4444; --jt-red-bg:#fef2f2;
+    }
+    .jt-toolbar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .jt-search {
+      position: relative; flex: 1; min-width: 220px;
+    }
+    .jt-search svg {
+      position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+      width: 15px; height: 15px; color: var(--jt-slate-lite);
+    }
+    .jt-search input {
+      width: 100%; padding: 9px 12px 9px 34px;
+      border: 1.5px solid var(--jt-border); border-radius: 8px;
+      font-family: inherit; font-size: 13px; color: var(--jt-ink-soft);
+      background: white; outline: none;
+      transition: border-color 200ms, box-shadow 200ms;
+    }
+    .jt-search input:focus {
+      border-color: var(--jt-blue);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+    .jt-sort {
+      padding: 9px 12px;
+      border: 1.5px solid var(--jt-border); border-radius: 8px;
+      font-family: inherit; font-size: 13px; color: var(--jt-ink-soft);
+      background: white; cursor: pointer; outline: none;
+      transition: border-color 200ms;
+    }
+    .jt-sort:focus { border-color: var(--jt-blue); }
+    .jt-refresh {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 14px;
+      border: 1.5px solid var(--jt-border); border-radius: 8px;
+      background: white; color: var(--jt-slate);
+      font-family: inherit; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all 200ms;
+    }
+    .jt-refresh:hover { border-color: var(--jt-blue); color: var(--jt-blue); background: var(--jt-sky); }
+    .jt-refresh svg { width: 14px; height: 14px; }
+
+    .jt-panel {
+      background: white;
+      border: 1px solid var(--jt-border);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(13,27,62,.07);
+      overflow: hidden; overflow-x: auto;
+    }
+    .jt-header, .jt-row-main { min-width: 750px; }
+    .jt-header {
+      display: grid;
+      grid-template-columns: 52px 2fr 130px 100px 100px 90px 0.9fr 114px;
+      gap: 8px;
+      padding: 12px 20px;
+      background: var(--jt-off-white);
+      border-bottom: 1px solid var(--jt-border);
+      font-size: 11px; font-weight: 700; color: var(--jt-slate);
+      letter-spacing: .6px; text-transform: uppercase;
+    }
+    .jt-header span { text-align: center; }
+    .jt-header span:nth-child(2) { text-align: left; }
+    .jt-row { border-bottom: 1px solid var(--jt-border); transition: background 200ms;
+              cursor: pointer; animation: jt-rowIn .25s ease both; }
+    @keyframes jt-rowIn { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+    .jt-row:last-child { border-bottom: none; }
+    .jt-row:hover { background: #fbfcff; }
+    .jt-row.is-open { background: var(--jt-sky); }
+    .jt-row.is-open:hover { background: var(--jt-sky); }
+    .jt-row-main {
+      display: grid;
+      grid-template-columns: 52px 2fr 130px 100px 100px 90px 0.9fr 114px;
+      gap: 8px; padding: 14px 20px; align-items: center;
+    }
+    .jt-note-cell { display: flex; align-items: center; justify-content: flex-start; min-width: 0; overflow: hidden; }
+    .jt-note-btn {
+      display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+      font-size: 11px; color: var(--jt-slate-lite); background: none;
+      border: 1px dashed var(--jt-border); border-radius: 6px;
+      padding: 3px 7px; cursor: pointer; transition: border-color 150ms, color 150ms;
+      overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    }
+    .jt-note-btn.has-note { border-style: solid; color: var(--jt-ink-soft); border-color: var(--jt-slate-lite); }
+    .jt-note-btn svg { width: 10px; height: 10px; flex-shrink: 0; }
+    .jt-note-btn:hover { border-color: var(--jt-blue); color: var(--jt-blue); }
+    .jt-note-editor { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+    .jt-note-editor textarea {
+      width: 100%; padding: 4px 7px; border: 1.5px solid var(--jt-blue);
+      border-radius: 6px; font-size: 11px; font-family: inherit; resize: vertical;
+      outline: none; color: var(--jt-ink); line-height: 1.4;
+    }
+    .jt-note-editor-btns { display: flex; gap: 4px; }
+    .jt-note-save {
+      flex: 1; padding: 3px 0; font-size: 11px; font-weight: 600;
+      background: var(--jt-blue); color: white; border: none; border-radius: 5px; cursor: pointer;
+    }
+    .jt-note-save:disabled { opacity: 0.6; cursor: not-allowed; }
+    .jt-note-cancel {
+      flex: 1; padding: 3px 0; font-size: 11px; font-weight: 600;
+      background: white; color: var(--jt-slate); border: 1px solid var(--jt-border);
+      border-radius: 5px; cursor: pointer;
+    }
+    .jt-title-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .jt-title { font-size: 14px; font-weight: 600; color: var(--jt-navy);
+                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                overflow: hidden; word-break: break-word; }
+    .jt-meta  { font-size: 12px; color: var(--jt-slate);
+                display: flex; align-items: center; gap: 6px; }
+    .jt-meta-dot { width: 3px; height: 3px; border-radius: 50%;
+                   background: var(--jt-slate-lite); flex-shrink: 0; }
+    .jt-date  { font-size: 12px; color: var(--jt-slate); text-align: center; }
+    .jt-date-main { font-weight: 500; color: var(--jt-ink-soft); }
+    .jt-date-time { font-size: 11px; color: var(--jt-slate-lite); margin-top: 1px; }
+    .jt-center { display: flex; align-items: center; justify-content: center; }
+    .jt-duration { font-size: 12px; color: var(--jt-slate); text-align: center; }
+
+    .jt-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; letter-spacing: .3px;
+    }
+    .jt-badge::before { content: ''; width: 6px; height: 6px;
+                        border-radius: 50%; flex-shrink: 0; }
+    .jt-badge.completed  { background: var(--jt-green-bg); color: #065f46; }
+    .jt-badge.completed::before  { background: var(--jt-green); }
+    .jt-badge.processing,
+    .jt-badge.pending    { background: var(--jt-amber-bg); color: #92400e; }
+    .jt-badge.processing::before,
+    .jt-badge.pending::before { background: var(--jt-amber); animation: jt-pulse 1s ease-in-out infinite; }
+    .jt-badge.failed     { background: var(--jt-red-bg); color: #991b1b; }
+    .jt-badge.failed::before     { background: var(--jt-red); }
+    @keyframes jt-pulse { 0%,100%{opacity:1;} 50%{opacity:.45;} }
+
+    .jt-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+    .jt-iconbtn {
+      width: 30px; height: 30px; border-radius: 8px;
+      border: 1.5px solid var(--jt-border); background: white;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 200ms; color: var(--jt-slate);
+    }
+    .jt-iconbtn:hover { border-color: var(--jt-blue); color: var(--jt-blue); background: var(--jt-sky); }
+    .jt-iconbtn:disabled { opacity: .55; cursor: not-allowed; }
+    .jt-iconbtn svg { width: 14px; height: 14px; }
+    .jt-iconbtn.download:hover { border-color: var(--jt-green); color: var(--jt-green); background: var(--jt-green-bg); }
+    .jt-iconbtn.del:hover { border-color: var(--jt-red); color: var(--jt-red); background: var(--jt-red-bg); }
+
+    .jt-linkbtn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border-radius: 6px;
+      font-size: 12px; font-weight: 600; color: var(--jt-blue);
+      background: var(--jt-sky); border: 1px solid var(--jt-sky-deep);
+      text-decoration: none; white-space: nowrap; transition: all 200ms;
+    }
+    .jt-linkbtn:hover { background: var(--jt-sky-deep); border-color: var(--jt-blue); }
+    .jt-linkbtn svg { width: 11px; height: 11px; }
+
+    .jt-expand { display: none; padding: 0 20px 20px; animation: jt-expandIn .2s ease both; }
+    @keyframes jt-expandIn { from{opacity:0;transform:translateY(-4px);} to{opacity:1;transform:translateY(0);} }
+    .jt-row.is-open .jt-expand { display: block; }
+    .jt-expand-inner {
+      background: white; border: 1px solid var(--jt-border); border-radius: 12px;
+      padding: 18px; box-shadow: 0 1px 3px rgba(13,27,62,.05);
+    }
+    .jt-jd-text { font-size: 13px; color: var(--jt-ink-soft); line-height: 1.65;
+                  white-space: pre-wrap; max-height: 240px; overflow-y: auto; }
+
+    /* ── Progress-status badges (shared across bidder + admin tables) ── */
+    .ps-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; letter-spacing: .3px;
+      white-space: nowrap;
+    }
+    .ps-badge::before {
+      content: ''; width: 6px; height: 6px;
+      border-radius: 50%; flex-shrink: 0;
+    }
+    /* AI in-flight */
+    .ps-pending,
+    .ps-processing { background: #fffbeb; color: #92400e; }
+    .ps-pending::before,
+    .ps-processing::before { background: #f59e0b; animation: jt-pulse 1s ease-in-out infinite; }
+    /* Pipeline */
+    .ps-generated   { background: #eff6ff; color: #1e40af; }
+    .ps-generated::before   { background: #2563eb; }
+    .ps-downloaded  { background: #ecfeff; color: #155e75; }
+    .ps-downloaded::before  { background: #0891b2; }
+    .ps-qa          { background: #f3e8ff; color: #6b21a8; }
+    .ps-qa::before          { background: #9333ea; }
+    .ps-applied     { background: #fffbeb; color: #92400e; }
+    .ps-applied::before     { background: #f59e0b; }
+    .ps-interviewed { background: #ecfdf5; color: #065f46; }
+    .ps-interviewed::before { background: #10b981; }
+    .ps-failed      { background: #fef2f2; color: #991b1b; }
+    .ps-failed::before      { background: #ef4444; }
+
+    /* Small inline action buttons (for admin: mark Applied / Interviewed) */
+    .ps-action {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 600;
+      border: 1px solid var(--jt-border); background: white;
+      color: var(--jt-slate); cursor: pointer;
+      transition: all 150ms;
+    }
+    .ps-action:hover:not(:disabled) {
+      border-color: var(--jt-blue); color: var(--jt-blue); background: var(--jt-sky);
+    }
+    .ps-action:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── Admin status-change chips: one button per destination status ── */
+    .ps-chip {
+      display: inline-flex; align-items: center;
+      padding: 3px 9px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+      border: 1px solid var(--jt-border); background: white;
+      color: var(--jt-slate); cursor: pointer;
+      transition: all 150ms; white-space: nowrap;
+    }
+    .ps-chip::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      margin-right: 5px; flex-shrink: 0; background: currentColor;
+      opacity: .6;
+    }
+    .ps-chip:hover:not(:disabled) { transform: translateY(-1px); }
+    .ps-chip:disabled { opacity: .45; cursor: not-allowed; }
+    .ps-chip-generated   { color: #1e40af; }
+    .ps-chip-generated:hover:not(:disabled)   { background:#eff6ff; border-color:#bfdbfe; }
+    .ps-chip-downloaded  { color: #155e75; }
+    .ps-chip-downloaded:hover:not(:disabled)  { background:#ecfeff; border-color:#a5f3fc; }
+    .ps-chip-qa          { color: #6b21a8; }
+    .ps-chip-qa:hover:not(:disabled)          { background:#f3e8ff; border-color:#e9d5ff; }
+    .ps-chip-applied     { color: #92400e; }
+    .ps-chip-applied:hover:not(:disabled)     { background:#fffbeb; border-color:#fde68a; }
+    .ps-chip-interviewed { color: #065f46; }
+    .ps-chip-interviewed:hover:not(:disabled) { background:#ecfdf5; border-color:#a7f3d0; }
+
+    .jt-empty { padding: 56px 20px; text-align: center; color: var(--jt-slate); }
+    .jt-empty .ico {
+      width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%;
+      background: var(--jt-sky); display: flex; align-items: center; justify-content: center;
+    }
+    .jt-empty .ico svg { width: 28px; height: 28px; color: var(--jt-blue-lite); }
+    .jt-empty .title { font-size: 16px; font-weight: 700; color: var(--jt-navy); margin-bottom: 4px; }
+    .jt-empty .sub { font-size: 13px; }
+  </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen" x-data="appShell()" x-init="init()" x-cloak>
+
+<!-- ── SIDEBAR ──────────────────────────────────────────────────────────────── -->
+<aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+       class="fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200
+              flex flex-col transition-transform duration-200 lg:translate-x-0">
+
+  <!-- Logo -->
+  <div class="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
+    <div class="w-8 h-8 bg-brand rounded-lg flex items-center justify-center flex-shrink-0">
+      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+    </div>
+    <div>
+      <p class="font-bold text-slate-900 text-sm">VDCertify</p>
+      <p class="text-xs text-slate-400" x-text="user?.role === 'ADMIN' ? 'Admin' : 'Bidder'"></p>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+
+    <!-- Admin nav -->
+    <template x-if="user?.role === 'ADMIN'">
+      <div class="space-y-1">
+        <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Admin</p>
+        <a @click="go('admin-dashboard')" :class="page==='admin-dashboard'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          Dashboard
+        </a>
+        <a @click="go('admin-bidders')" :class="page==='admin-bidders'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Bidders
+        </a>
+        <a @click="go('admin-profiles')" :class="page==='admin-profiles'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          Profiles
+        </a>
+        <a @click="go('admin-templates')" :class="page==='admin-templates'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
+          </svg>
+          Templates
+        </a>
+        <a @click="go('admin-worklogs')" :class="page==='admin-worklogs'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          Work Logs
+        </a>
+        <a @click="go('admin-analytics')" :class="page==='admin-analytics'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 3v18h18M7 14l4-4 4 4 6-6"/>
+          </svg>
+          Analytics
+        </a>
+        <a @click="go('admin-jobtracker')" :class="page==='admin-jobtracker'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          Job Tracker
+        </a>
+      </div>
+    </template>
+
+    <!-- Bidder nav -->
+    <template x-if="user?.role === 'BIDDER'">
+      <div class="space-y-1">
+        <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Menu</p>
+        <a @click="go('bidder-dashboard')" :class="page==='bidder-dashboard'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          Dashboard
+        </a>
+        <a @click="go('bidder-profiles')" :class="page==='bidder-profiles'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          My Profiles
+        </a>
+        <a @click="go('bidder-folders')" :class="page==='bidder-folders'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          Workspaces
+        </a>
+        <a @click="go('bidder-analytics')" :class="page==='bidder-analytics'&&'active'" class="sidebar-link">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 3v18h18M7 14l4-4 4 4 6-6"/>
+          </svg>
+          Analytics
+        </a>
+      </div>
+    </template>
+  </nav>
+
+  <!-- User footer -->
+  <div class="border-t border-slate-100 px-3 py-3">
+    <div class="flex items-center gap-3 px-2 py-2 rounded-lg">
+      <div class="w-8 h-8 bg-brand-muted rounded-full flex items-center justify-center flex-shrink-0">
+        <span class="text-brand text-xs font-bold" x-text="(user?.name||'?')[0].toUpperCase()"></span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-slate-800 truncate" x-text="user?.name"></p>
+        <p class="text-xs text-slate-400 truncate" x-text="user?.email"></p>
+      </div>
+      <button @click="logout()" title="Sign out"
+              class="text-slate-400 hover:text-red-500 transition p-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- Sidebar overlay (mobile) -->
+<div x-show="sidebarOpen" @click="sidebarOpen=false"
+     class="fixed inset-0 bg-black/30 z-20 lg:hidden" x-cloak></div>
+
+<!-- ── MAIN CONTENT ──────────────────────────────────────────────────────────── -->
+<div class="lg:pl-64 min-h-screen flex flex-col">
+
+  <!-- Topbar -->
+  <header class="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 lg:hidden">
+    <button @click="sidebarOpen=true" class="text-slate-500 hover:text-slate-900">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
+    <span class="font-semibold text-slate-900 text-sm">VDCertify</span>
+  </header>
+
+  <main class="flex-1 p-6 space-y-6">
+
+    <!-- ═══════════ ADMIN DASHBOARD ═══════════ -->
+    <div x-show="page==='admin-dashboard'" x-data="adminDashboard()">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="section-title">Dashboard</h1>
+      </div>
+      <!-- Stats -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="stat-card">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Bidders</p>
+          <p class="text-2xl font-bold text-slate-900" x-text="stats.totalBidders ?? '—'"></p>
+        </div>
+        <div class="stat-card">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Profiles</p>
+          <p class="text-2xl font-bold text-slate-900" x-text="stats.totalProfiles ?? '—'"></p>
+        </div>
+        <div class="stat-card">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Resumes (7d)</p>
+          <p class="text-2xl font-bold text-slate-900" x-text="stats.resumesLast7d ?? '—'"></p>
+        </div>
+        <div class="stat-card border border-brand/30 bg-gradient-to-br from-blue-50 to-white">
+          <p class="text-xs font-medium text-brand uppercase tracking-wide">Earnings (7d)</p>
+          <p class="text-2xl font-bold text-brand"
+             x-text="earnings ? ('$' + earnings.totals.earnings.toFixed(2)) : '—'"></p>
+          <p class="text-xs text-slate-500"
+             x-text="earnings ? (earnings.totals.appliedCount + ' applied · ' + earnings.totals.interviewedCount + ' interviewed') : ''"></p>
+        </div>
+      </div>
+
+      <!-- Two-column: chart + top earners -->
+      <div class="grid lg:grid-cols-3 gap-4">
+        <div class="card lg:col-span-2">
+          <p class="text-sm font-semibold text-slate-700 mb-4">Resumes generated — last 7 days</p>
+          <canvas id="resumeChart" height="80"></canvas>
+        </div>
+        <div class="card">
+          <p class="text-sm font-semibold text-slate-700 mb-3">Top earners — last 7 days</p>
+          <template x-if="!earnings || earnings.breakdown.length===0">
+            <p class="text-xs text-slate-400 py-4">No earnings yet.</p>
+          </template>
+          <div class="space-y-2">
+            <template x-for="row in (earnings ? earnings.breakdown.slice(0,5) : [])" :key="row.bidder.id">
+              <div class="flex items-center justify-between py-1.5">
+                <div class="min-w-0 flex-1 pr-3">
+                  <p class="text-sm font-medium text-slate-800 truncate" x-text="row.bidder.name"></p>
+                  <p class="text-xs text-slate-400"
+                     x-text="row.appliedCount + ' applied · ' + row.interviewedCount + ' interviews'"></p>
+                </div>
+                <span class="text-sm font-semibold text-brand"
+                      x-text="'$' + row.earnings.toFixed(2)"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ ADMIN BIDDERS ═══════════ -->
+    <div x-show="page==='admin-bidders'" x-data="adminBidders()">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="section-title">Bidders</h1>
+        <button @click="openCreate()" class="btn-primary">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          New Bidder
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div class="mb-4">
+        <input x-model="search" @input.debounce.300ms="load(1)" type="search"
+               placeholder="Search by name or email…" class="input max-w-sm"/>
+      </div>
+
+      <!-- Card grid (Explorer-style) -->
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-if="loading && items.length===0">
+          <div class="col-span-full text-center py-10 text-slate-400">Loading…</div>
+        </template>
+        <template x-if="!loading && items.length===0">
+          <div class="col-span-full text-center py-10 text-slate-400">No bidders yet</div>
+        </template>
+        <template x-for="b in items" :key="b.id">
+          <div class="card hover:shadow-md transition cursor-pointer group relative"
+               @click="openEdit(b)">
+            <div class="flex items-start justify-between mb-3">
+              <div class="w-10 h-10 rounded-full bg-brand-muted flex items-center justify-center text-brand font-bold text-sm flex-shrink-0">
+                <span x-text="(b.name||'?')[0].toUpperCase()"></span>
+              </div>
+              <button @click.stop="confirmDelete(b)"
+                      class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition p-1"
+                      title="Delete">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+            <p class="font-semibold text-slate-900 text-sm truncate" x-text="b.name"></p>
+            <p class="text-xs text-slate-400 mb-3 truncate" x-text="b.email"></p>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span :class="b.isActive ? 'badge-active' : 'badge-inactive'"
+                    x-text="b.isActive ? 'Active' : 'Disabled'"></span>
+              <span class="text-xs text-slate-400" x-text="`${b._count?.assignments ?? 0} profiles`"></span>
+              <span class="text-xs text-slate-400" x-text="`${b._count?.generations ?? 0} resumes`"></span>
+            </div>
+            <template x-if="b.lastActiveAt">
+              <p class="text-xs text-slate-400 mt-2"
+                 x-text="`Last active ${fmtDate(b.lastActiveAt)}`"></p>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- Pagination -->
+      <div x-show="pagination.totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-slate-600">
+        <span x-text="`${pagination.total} bidders`"></span>
+        <div class="flex gap-2">
+          <button @click="load(pagination.page-1)" :disabled="pagination.page<=1" class="btn-secondary">Prev</button>
+          <button @click="load(pagination.page+1)" :disabled="pagination.page>=pagination.totalPages" class="btn-secondary">Next</button>
+        </div>
+      </div>
+
+      <!-- Create/Edit Modal -->
+      <div x-show="modal" x-cloak class="modal-overlay" @click.self="modal=false">
+        <div class="modal-box">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-900" x-text="editing ? 'Edit Bidder' : 'New Bidder'"></h2>
+            <button @click="modal=false" class="text-slate-400 hover:text-slate-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="px-6 py-5 space-y-4 overflow-y-auto">
+            <div x-show="formError" class="px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg" x-text="formError"></div>
+            <div>
+              <label class="label">Name</label>
+              <input x-model="form.name" class="input" placeholder="Full name"/>
+            </div>
+            <div x-show="!editing">
+              <label class="label">Email</label>
+              <input x-model="form.email" type="email" class="input" placeholder="email@example.com"/>
+            </div>
+            <div>
+              <label class="label" x-text="editing ? 'New Password (leave blank to keep)' : 'Password'"></label>
+              <input x-model="form.password" type="password" class="input" placeholder="Min 8 characters"/>
+            </div>
+            <template x-if="editing">
+              <div class="flex items-center gap-3">
+                <input x-model="form.isActive" type="checkbox" id="activeCheck" class="w-4 h-4 text-brand rounded"/>
+                <label for="activeCheck" class="text-sm text-slate-700">Active</label>
+              </div>
+            </template>
+
+            <!-- Compensation rates — admin-only -->
+            <div class="pt-3 mt-3 border-t border-slate-100">
+              <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Compensation</p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="label">Per Applied Bid ($)</label>
+                  <input x-model.number="form.appliedRate" type="number" step="0.01" min="0"
+                         class="input" placeholder="0.05"/>
+                </div>
+                <div>
+                  <label class="label">Per Interview ($)</label>
+                  <input x-model.number="form.interviewRate" type="number" step="0.01" min="0"
+                         class="input" placeholder="0.50"/>
+                </div>
+              </div>
+              <p class="text-xs text-slate-400 mt-2">
+                Paid out when admin marks a bid Applied or Interviewed. Defaults: $0.05 / $0.50.
+              </p>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button @click="modal=false" class="btn-secondary">Cancel</button>
+            <button @click="save()" :disabled="saving" class="btn-primary">
+              <svg x-show="saving" class="spinner" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              <span x-text="saving ? 'Saving…' : 'Save'"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Confirm -->
+      <div x-show="deleteTarget" x-cloak class="modal-overlay" @click.self="deleteTarget=null">
+        <div class="modal-box max-w-sm">
+          <div class="px-6 py-5">
+            <p class="font-semibold text-slate-900 mb-1">Delete bidder?</p>
+            <p class="text-sm text-slate-500">This will remove <strong x-text="deleteTarget?.name"></strong> and all their data permanently.</p>
+          </div>
+          <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button @click="deleteTarget=null" class="btn-secondary">Cancel</button>
+            <button @click="doDelete()" :disabled="saving" class="btn-danger">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ ADMIN PROFILES ═══════════ -->
+    <div x-show="page==='admin-profiles'" x-data="adminProfiles()">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="section-title">Profiles</h1>
+        <button @click="openCreate()" class="btn-primary">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          New Profile
+        </button>
+      </div>
+
+      <div class="mb-4">
+        <input x-model="search" @input.debounce.300ms="load(1)" type="search"
+               placeholder="Search profiles…" class="input max-w-sm"/>
+      </div>
+
+      <!-- Grid -->
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-if="loading && items.length===0">
+          <div class="col-span-full text-center py-10 text-slate-400">Loading…</div>
+        </template>
+        <template x-if="!loading && items.length===0">
+          <div class="col-span-full text-center py-10 text-slate-400">No profiles yet</div>
+        </template>
+        <template x-for="p in items" :key="p.id">
+          <div class="card hover:shadow-md transition cursor-pointer group relative"
+               @click="openDetail(p)">
+            <div class="flex items-start justify-between mb-3">
+              <div class="w-10 h-10 rounded-full bg-brand-muted flex items-center justify-center text-brand font-bold text-sm flex-shrink-0">
+                <span x-text="p.fullName[0].toUpperCase()"></span>
+              </div>
+              <button @click.stop="confirmDeleteProfile(p)" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition p-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+            <p class="font-semibold text-slate-900 text-sm" x-text="p.fullName"></p>
+            <p class="text-xs text-slate-400 mb-3" x-text="p.email"></p>
+            <div class="flex items-center gap-2 flex-wrap">
+              <template x-if="p.defaultPdfTemplate">
+                <span class="badge-active" x-text="p.defaultPdfTemplate.name"></span>
+              </template>
+              <span class="text-xs text-slate-400" x-text="`${p._count?.assignments??0} assigned`"></span>
+              <span class="text-xs text-slate-400" x-text="`${p._count?.generations??0} resumes`"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div x-show="pagination.totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-slate-600">
+        <span x-text="`${pagination.total} profiles`"></span>
+        <div class="flex gap-2">
+          <button @click="load(pagination.page-1)" :disabled="pagination.page<=1" class="btn-secondary">Prev</button>
+          <button @click="load(pagination.page+1)" :disabled="pagination.page>=pagination.totalPages" class="btn-secondary">Next</button>
+        </div>
+      </div>
+
+      <!-- Create/Edit Profile Modal -->
+      <div x-show="modal" x-cloak class="modal-overlay" @click.self="modal=false">
+        <div class="modal-box-lg">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-900" x-text="editing ? 'Edit Profile' : 'New Profile'"></h2>
+            <button @click="modal=false" class="text-slate-400 hover:text-slate-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+            <div x-show="formError" class="px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg" x-text="formError"></div>
+            <div class="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label class="label">Full Name *</label>
+                <input x-model="form.fullName" class="input" placeholder="John Smith"/>
+              </div>
+              <div>
+                <label class="label">Email *</label>
+                <input x-model="form.email" type="email" class="input" placeholder="john@example.com"/>
+              </div>
+              <div>
+                <label class="label">Phone</label>
+                <input x-model="form.phoneNumber" class="input" placeholder="+1 555 000 0000"/>
+              </div>
+              <div>
+                <label class="label">LinkedIn URL</label>
+                <input x-model="form.linkedinUrl" class="input" placeholder="linkedin.com/in/…"/>
+              </div>
+              <div class="sm:col-span-2">
+                <label class="label">Address</label>
+                <input x-model="form.address" class="input" placeholder="City, State"/>
+              </div>
+              <div>
+                <label class="label">AI Provider</label>
+                <select x-model="form.aiProvider" class="input">
+                  <option value="">— Select —</option>
+                  <option value="anthropic">Anthropic (Claude)</option>
+                  <option value="openai">OpenAI (GPT)</option>
+                  <option value="mistral">Mistral AI</option>
+                </select>
+              </div>
+              <div>
+                <label class="label">AI Model</label>
+                <select x-model="form.aiModel" class="input">
+                  <option value="">— Select —</option>
+                  <template x-if="form.aiProvider==='anthropic'">
+                    <template x-for="m in ['claude-opus-4-7','claude-sonnet-4-6','claude-haiku-4-5-20251001']">
+                      <option :value="m" x-text="m"></option>
+                    </template>
+                  </template>
+                  <template x-if="form.aiProvider==='mistral'">
+                    <template x-for="m in ['mistral-large-latest','mistral-small-latest','mistral-medium-latest']">
+                      <option :value="m" x-text="m"></option>
+                    </template>
+                  </template>
+                  <template x-if="form.aiProvider==='openai'">
+                    <template x-for="m in ['gpt-5.5','gpt-5','gpt-5-mini','gpt-4o','gpt-4o-mini']">
+                      <option :value="m" x-text="m"></option>
+                    </template>
+                  </template>
+                </select>
+              </div>
+              <div class="sm:col-span-2">
+                <label class="label">Default Template</label>
+                <select x-model="form.defaultPdfTemplateId" class="input">
+                  <option value="">— None —</option>
+                  <template x-for="t in templates" :key="t.id">
+                    <option :value="t.id" x-text="t.name"></option>
+                  </template>
+                </select>
+              </div>
+            </div>
+
+            <!-- ── Work Experiences ─────────────────────────────────────── -->
+            <div class="pt-4 mt-2 border-t border-slate-100">
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <p class="text-sm font-semibold text-slate-800">Work Experience</p>
+                  <p class="text-xs text-slate-400">In reverse chronological order — most recent first.</p>
+                </div>
+                <button type="button" @click="addExperience()" class="btn-secondary text-xs">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Add Experience
+                </button>
+              </div>
+
+              <template x-if="(form.experiences||[]).length===0">
+                <p class="text-xs text-slate-400 py-3">No experiences yet — add at least one.</p>
+              </template>
+
+              <template x-for="(exp, idx) in form.experiences" :key="idx">
+                <div class="grid grid-cols-12 gap-2 mb-2 items-end">
+                  <div class="col-span-12 sm:col-span-4">
+                    <label class="label text-xs" x-show="idx===0">Company</label>
+                    <input x-model="exp.company" class="input" placeholder="Company name *"/>
+                  </div>
+                  <div class="col-span-12 sm:col-span-3">
+                    <label class="label text-xs" x-show="idx===0">Location</label>
+                    <input x-model="exp.location" class="input" placeholder="City, ST / Remote"/>
+                  </div>
+                  <div class="col-span-7 sm:col-span-3">
+                    <label class="label text-xs" x-show="idx===0">Period</label>
+                    <input x-model="exp.period" class="input" placeholder="01/2023 – Present"/>
+                  </div>
+                  <div class="col-span-4 sm:col-span-1">
+                    <label class="label text-xs" x-show="idx===0">Size</label>
+                    <select x-model="exp.size" class="input">
+                      <option value="">Auto</option>
+                      <option value="startup">Startup</option>
+                      <option value="mid">Mid</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                  </div>
+                  <div class="col-span-1">
+                    <button type="button" @click="removeExperience(idx)"
+                            class="text-slate-400 hover:text-red-500 p-2"
+                            title="Remove">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- ── Education ──────────────────────────────────────────── -->
+            <div class="pt-4 mt-2 border-t border-slate-100">
+              <p class="text-sm font-semibold text-slate-800 mb-2">Education</p>
+              <div class="grid sm:grid-cols-3 gap-3">
+                <div>
+                  <label class="label">Degree</label>
+                  <input x-model="form.education.degree" class="input"
+                         placeholder="Bachelor of Science – Computer Science"/>
+                </div>
+                <div>
+                  <label class="label">Discipline</label>
+                  <input x-model="form.education.discipline" class="input"
+                         placeholder="Computer Science"/>
+                </div>
+                <div>
+                  <label class="label">University</label>
+                  <input x-model="form.education.university" class="input"
+                         placeholder="University of …"/>
+                </div>
+                <div class="sm:col-span-3">
+                  <label class="label">Period</label>
+                  <input x-model="form.education.period" class="input"
+                         placeholder="2010 – 2014"/>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button @click="modal=false" class="btn-secondary">Cancel</button>
+            <button @click="save()" :disabled="saving" class="btn-primary">
+              <svg x-show="saving" class="spinner" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              <span x-text="saving ? 'Saving…' : 'Save Profile'"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Detail / Assignments Modal -->
+      <div x-show="detailModal" x-cloak class="modal-overlay" @click.self="detailModal=false">
+        <div class="modal-box-lg" style="max-width:56rem">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-900" x-text="selected?.fullName"></h2>
+            <div class="flex items-center gap-2">
+              <button @click="openEdit(selected)" class="btn-secondary text-xs">Edit</button>
+              <button @click="detailModal=false" class="text-slate-400 hover:text-slate-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="px-6 py-5 overflow-y-auto flex-1 space-y-5">
+            <!-- Info -->
+            <div class="grid sm:grid-cols-2 gap-3 text-sm">
+              <div><span class="text-slate-400">Email: </span><span x-text="selected?.email"></span></div>
+              <div><span class="text-slate-400">Phone: </span><span x-text="selected?.phoneNumber||'—'"></span></div>
+              <div><span class="text-slate-400">LinkedIn: </span><span x-text="selected?.linkedinUrl||'—'"></span></div>
+              <div><span class="text-slate-400">Template: </span><span x-text="selected?.defaultPdfTemplate?.name||'None'"></span></div>
+              <div><span class="text-slate-400">Provider: </span><span x-text="selected?.aiProvider||'—'"></span></div>
+              <div><span class="text-slate-400">Model: </span><span x-text="selected?.aiModel||'—'"></span></div>
+            </div>
+
+            <!-- Assignments -->
+            <div>
+              <p class="font-semibold text-slate-800 mb-3">Assigned Bidders</p>
+              <div class="flex items-center gap-2 mb-3">
+                <select x-model="assignBidderId" class="input flex-1">
+                  <option value="">Select bidder to assign…</option>
+                  <template x-for="b in availableBidders" :key="b.id">
+                    <option :value="b.id" x-text="b.name + ' (' + b.email + ')'"></option>
+                  </template>
+                </select>
+                <button @click="assign()" :disabled="!assignBidderId || assigning" class="btn-primary whitespace-nowrap">
+                  <span x-text="assigning ? 'Assigning…' : 'Assign'"></span>
+                </button>
+              </div>
+              <div x-show="assignments.length===0" class="text-sm text-slate-400 py-3">No bidders assigned yet</div>
+              <div class="space-y-2">
+                <template x-for="a in assignments" :key="a.id">
+                  <div class="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg">
+                    <div>
+                      <p class="text-sm font-medium text-slate-800" x-text="a.bidder.name"></p>
+                      <p class="text-xs text-slate-400" x-text="a.bidder.email"></p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span :class="a.bidder.isActive ? 'badge-active' : 'badge-inactive'"
+                            x-text="a.bidder.isActive ? 'Active' : 'Disabled'"></span>
+                      <button @click="unassign(a)" class="text-slate-400 hover:text-red-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Profile Confirm -->
+      <div x-show="deleteTarget" x-cloak class="modal-overlay" @click.self="deleteTarget=null">
+        <div class="modal-box max-w-sm">
+          <div class="px-6 py-5">
+            <p class="font-semibold text-slate-900 mb-1">Delete profile?</p>
+            <p class="text-sm text-slate-500">This will remove <strong x-text="deleteTarget?.fullName"></strong> and all associated data.</p>
+          </div>
+          <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button @click="deleteTarget=null" class="btn-secondary">Cancel</button>
+            <button @click="doDeleteProfile()" :disabled="saving" class="btn-danger">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ ADMIN TEMPLATES ═══════════ -->
+    <div x-show="page==='admin-templates'" x-data="adminTemplates()">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="section-title">Templates</h1>
+        <button @click="openCreate()" class="btn-primary">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          New Template
+        </button>
+      </div>
+
+      <div class="mb-4">
+        <input x-model="search" @input.debounce.300ms="load(1)" type="search"
+               placeholder="Search templates…" class="input max-w-sm"/>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-if="loading && items.length===0">
+          <div class="col-span-full text-center py-10 text-slate-400">Loading…</div>
+        </template>
+        <template x-if="!loading && items.length===0">
+          <div class="col-span-full text-center py-10 text-slate-400">No templates yet</div>
+        </template>
+        <template x-for="t in items" :key="t.id">
+          <div class="card group relative hover:shadow-md transition flex flex-col">
+            <div class="flex items-start justify-between mb-3">
+              <!-- Accent-color swatch from the template's own config -->
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                   :style="`background: ${t.config?.accent || '#64748b'}`">
+                <span x-text="(t.name||'?')[0].toUpperCase()"></span>
+              </div>
+              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition" x-show="t.canEdit">
+                <button @click="openEdit(t)" class="text-slate-400 hover:text-brand p-1" title="Edit">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+                <button @click="confirmDelete(t)" class="text-slate-400 hover:text-red-500 p-1" title="Delete">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <p class="font-semibold text-slate-900 text-sm" x-text="t.name"></p>
+            <p class="text-xs text-slate-400 mt-1 mb-3 line-clamp-2" x-text="t.description||'No description'"></p>
+            <div class="flex gap-2 text-xs text-slate-400 mb-3">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border"
+                    :class="t.isInUse ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500'"
+                    x-text="t.isInUse ? 'In Use' : 'Unused'"></span>
+              <template x-if="t.config?.shape">
+                <span class="ml-auto inline-flex items-center gap-1 text-slate-500"
+                      x-text="t.config.shape"></span>
+              </template>
+            </div>
+            <div class="flex gap-2 mt-auto">
+              <button @click="preview(t)" :disabled="previewingId===t.id"
+                      class="btn-secondary flex-1 justify-center text-xs">
+                <svg x-show="previewingId!==t.id" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <svg x-show="previewingId===t.id" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                <span x-text="previewingId===t.id ? 'Loading…' : 'Preview'"></span>
+              </button>
+              <button @click="downloadSample(t)" class="btn-secondary text-xs whitespace-nowrap"
+                      title="Download sample PDF">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Preview modal — embeds the rendered sample PDF inline -->
+      <div x-show="previewOpen" x-cloak class="modal-overlay" @click.self="closePreview()">
+        <div class="modal-box-lg" style="max-width:64rem; height:90vh;">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div>
+              <h2 class="font-semibold text-slate-900" x-text="previewTpl?.name"></h2>
+              <p class="text-xs text-slate-400" x-text="previewTpl?.description"></p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button @click="downloadSample(previewTpl)" class="btn-secondary text-xs">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+                Download
+              </button>
+              <button @click="closePreview()" class="text-slate-400 hover:text-slate-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="flex-1 overflow-hidden bg-slate-100">
+            <iframe x-show="previewUrl" :src="previewUrl"
+                    class="w-full h-full border-0" title="Template preview"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create/Edit Template Modal -->
+      <div x-show="modal" x-cloak class="modal-overlay" @click.self="modal=false">
+        <div class="modal-box">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-900" x-text="editing ? 'Edit Template' : 'New Template'"></h2>
+            <button @click="modal=false" class="text-slate-400 hover:text-slate-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+            <div x-show="formError" class="px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg" x-text="formError"></div>
+            <div>
+              <label class="label">Template Name *</label>
+              <input x-model="form.name" class="input" placeholder="e.g. Modern Blue"/>
+            </div>
+            <div>
+              <label class="label">Description</label>
+              <input x-model="form.description" class="input" placeholder="Optional description"/>
+            </div>
+
+            <div class="border-t border-slate-100 pt-4">
+              <p class="text-sm font-semibold text-slate-700 mb-3">Theme Settings</p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="label">Font Family</label>
+                  <select x-model="form.config.theme.fontFamily" class="input">
+                    <option>Inter</option><option>Lora</option><option>Source Sans</option><option>Playfair</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="label">Layout</label>
+                  <select x-model="form.config.theme.layout" class="input">
+                    <option value="one-col">One Column</option>
+                    <option value="two-col">Two Column</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="label">Density</label>
+                  <select x-model="form.config.theme.density" class="input">
+                    <option value="compact">Compact</option>
+                    <option value="normal">Normal</option>
+                    <option value="relaxed">Relaxed</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="label">Accent Color</label>
+                  <input x-model="form.config.theme.accentColor" type="color" class="input h-9 p-1"/>
+                </div>
+              </div>
+              <!-- Timeline toggle -->
+              <div class="mt-3 flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 border border-slate-200">
+                <div>
+                  <p class="text-sm font-medium text-slate-700">Experience Timeline</p>
+                  <p class="text-xs text-slate-400">Show dot + vertical line beside each job entry</p>
+                </div>
+                <button type="button" @click="form.config.timeline = !form.config.timeline"
+                        :class="form.config.timeline ? 'bg-brand' : 'bg-slate-300'"
+                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 focus:outline-none">
+                  <span :class="form.config.timeline ? 'translate-x-5' : 'translate-x-1'"
+                        class="inline-block h-4 w-4 mt-1 rounded-full bg-white shadow transform transition-transform duration-200"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button @click="modal=false" class="btn-secondary">Cancel</button>
+            <button @click="save()" :disabled="saving" class="btn-primary">
+              <svg x-show="saving" class="spinner" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              <span x-text="saving ? 'Saving…' : 'Save'"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Template Confirm -->
+      <div x-show="deleteTarget" x-cloak class="modal-overlay" @click.self="deleteTarget=null">
+        <div class="modal-box max-w-sm">
+          <div class="px-6 py-5">
+            <p class="font-semibold text-slate-900 mb-1">Delete template?</p>
+            <p class="text-sm text-slate-500">Remove <strong x-text="deleteTarget?.name"></strong>?</p>
+          </div>
+          <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button @click="deleteTarget=null" class="btn-secondary">Cancel</button>
+            <button @click="doDelete()" class="btn-danger">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ ADMIN WORK LOGS ═══════════ -->
+    <div x-show="page==='admin-worklogs'" x-data="adminWorkLogs()">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <button x-show="logLevel>0" @click="drillUp()" class="text-slate-400 hover:text-brand">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <h1 class="section-title" x-text="logTitle"></h1>
+        </div>
+      </div>
+
+      <!-- View toggle (only at level 0) -->
+      <div x-show="logLevel===0" class="mb-6 inline-flex bg-slate-100 p-1 rounded-lg">
+        <button @click="switchMode('bidder')"
+                :class="mode==='bidder' ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                class="px-4 py-1.5 rounded-md text-sm font-medium transition">By Bidder</button>
+        <button @click="switchMode('profile')"
+                :class="mode==='profile' ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                class="px-4 py-1.5 rounded-md text-sm font-medium transition">By Profile</button>
+      </div>
+
+      <!-- Level 0: bidders OR profiles -->
+      <div x-show="logLevel===0 && mode==='bidder'" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-if="loading && bidderList.length===0"><div class="col-span-full text-center py-10 text-slate-400">Loading…</div></template>
+        <template x-if="!loading && bidderList.length===0"><div class="col-span-full text-center py-10 text-slate-400">No bidder workspaces yet</div></template>
+        <template x-for="b in bidderList" :key="b.bidder.id">
+          <div class="card hover:shadow-md transition cursor-pointer" @click="drillBidder(b)">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="font-semibold text-slate-900 text-sm" x-text="b.bidder.name"></p>
+                <p class="text-xs text-slate-400 mt-0.5" x-text="b.bidder.email"></p>
+              </div>
+              <span class="text-xs font-medium text-brand bg-brand-light px-2 py-0.5 rounded-full" x-text="b.workspaceCount + ' workspaces'"></span>
+            </div>
+            <p class="text-xs text-slate-400 mt-3" x-text="b.lastActivityAt ? 'Last: ' + fmtDate(b.lastActivityAt) : 'No activity'"></p>
+          </div>
+        </template>
+      </div>
+
+      <div x-show="logLevel===0 && mode==='profile'" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-if="loading && profileList.length===0"><div class="col-span-full text-center py-10 text-slate-400">Loading…</div></template>
+        <template x-if="!loading && profileList.length===0"><div class="col-span-full text-center py-10 text-slate-400">No profile activity yet</div></template>
+        <template x-for="p in profileList" :key="p.profile.id">
+          <div class="card hover:shadow-md transition cursor-pointer" @click="drillProfile(p)">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-brand-muted flex items-center justify-center text-brand font-bold text-xs flex-shrink-0">
+                  <span x-text="p.profile.fullName[0].toUpperCase()"></span>
+                </div>
+                <div>
+                  <p class="font-semibold text-slate-900 text-sm" x-text="p.profile.fullName"></p>
+                  <p class="text-xs text-slate-400 mt-0.5" x-text="p.profile.email"></p>
+                </div>
+              </div>
+              <span class="text-xs font-medium text-brand bg-brand-light px-2 py-0.5 rounded-full" x-text="p.logCount + ' logs'"></span>
+            </div>
+            <p class="text-xs text-slate-400 mt-3" x-text="p.lastActivityAt ? 'Last: ' + fmtDate(p.lastActivityAt) : 'No activity'"></p>
+          </div>
+        </template>
+      </div>
+
+      <!-- Level 1: bidder workspaces or profile date folders -->
+      <div x-show="logLevel===1" class="grid sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <template x-for="f in folderList" :key="_folderKey(f)">
+          <div class="card hover:shadow-md transition cursor-pointer text-center relative group"
+               @click="drillFolder(f)">
+            <button @click.stop="confirmDeleteFolder(f)"
+                    class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition p-1 z-10"
+                    title="Delete this whole workspace">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+            <p class="text-2xl font-bold text-slate-800" x-text="_folderCount(f)"></p>
+            <p class="text-sm font-semibold text-slate-700 mt-1 break-words" x-text="_folderName(f)"></p>
+            <p class="text-xs text-slate-500 mt-1" x-text="_folderMeta(f)"></p>
+          </div>
+        </template>
+      </div>
+
+      <!-- Level 2: logs within a folder -->
+      <div x-show="logLevel===2">
+        <div class="mb-3 flex items-center gap-3">
+          <select x-model="logStatusFilter" class="input text-sm max-w-xs">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Generating</option>
+            <option value="failed">Failed</option>
+            <option value="generated">Generated</option>
+            <option value="downloaded">Downloaded</option>
+            <option value="qa">Q &amp; A</option>
+            <option value="applied">Applied</option>
+            <option value="interviewed">Interviewed</option>
+            <option value="not_applied">Not Applied</option>
+          </select>
+          <span class="text-xs text-slate-400"
+                x-text="logStatusFilter ? filteredLogContents.length + ' of ' + logContents.length + ' rows' : logContents.length + ' rows'"></span>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="th w-14">S No.</th>
+                <th class="th">Time</th>
+                <th class="th">Profile</th>
+                <th class="th">Company</th>
+                <th class="th">Role</th>
+                <th class="th">JD</th>
+                <th class="th">Status</th>
+                <th class="th">Skip Reason</th>
+                <th class="th">Duration</th>
+                <th class="th w-24">Resume</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="filteredLogContents.length===0">
+                <tr>
+                  <td colspan="9" class="td text-center py-8 text-slate-400"
+                      x-text="logContents.length===0 ? (mode === 'profile' ? 'No logs' : 'No resumes in this workspace yet') : 'No rows match the selected status'"></td>
+                </tr>
+              </template>
+              <template x-for="(w, idx) in filteredLogContents" :key="w.id">
+                <tr class="tr">
+                  <td class="td text-xs font-semibold text-slate-500 text-center"
+                      x-text="filteredLogContents.length - idx"></td>
+                  <td class="td text-xs text-slate-400" x-text="fmtTime(w.createdAt)"></td>
+                  <td class="td text-sm" x-text="w.profile?.fullName||'—'"></td>
+                  <td class="td text-sm" x-text="w.companyName"></td>
+                  <td class="td text-sm" x-text="w.roleTitle"></td>
+                  <td class="td">
+                    <template x-if="w.generatedResume?.jobDescription">
+                      <button class="text-brand hover:underline text-xs font-medium"
+                              @click="openJd = w.generatedResume">View</button>
+                    </template>
+                    <template x-if="!w.generatedResume?.jobDescription">
+                      <span class="text-xs text-slate-400">—</span>
+                    </template>
+                  </td>
+                  <td class="td">
+                    <div class="flex flex-col items-start gap-1.5">
+                      <span class="ps-badge"
+                            :class="'ps-' + statusLabelOf(_logRow(w)).key"
+                            x-text="statusLabelOf(_logRow(w)).label"></span>
+                      <template x-if="_isEditable(w)">
+                        <div class="flex flex-wrap gap-1">
+                          <template x-for="opt in _statusOptions(w)" :key="opt.value">
+                            <button class="ps-chip"
+                                    :class="'ps-chip-' + opt.value.toLowerCase()"
+                                    :disabled="markingId===w.id"
+                                    @click="markStatus(w, opt.value)"
+                                    x-text="opt.label"></button>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </td>
+                  <td class="td text-xs text-slate-500 max-w-[160px]">
+                    <template x-if="w.generatedResume?.noApplyReason">
+                      <span class="inline-block rounded bg-amber-50 px-2 py-0.5 text-amber-800 border border-amber-200"
+                            :title="w.generatedResume.noApplyReason"
+                            x-text="w.generatedResume.noApplyReason"></span>
+                    </template>
+                    <template x-if="!w.generatedResume?.noApplyReason">
+                      <span class="text-slate-300">—</span>
+                    </template>
+                  </td>
+                  <td class="td text-xs text-slate-500"
+                      x-text="durationOf(w.createdAt, w.completedAt || w.generatedResume?.completedAt) || '—'"></td>
+                  <td class="td">
+                    <div class="flex items-center gap-2">
+                      <template x-if="w.generationStatus==='COMPLETED' && w.generatedResume?.id">
+                        <button @click="downloadResume(w, filteredLogContents.length - idx)" :disabled="downloadingId===w.id"
+                                class="inline-flex items-center gap-1 text-brand hover:text-brand-dark text-xs font-medium disabled:opacity-50">
+                          <svg x-show="downloadingId===w.id" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                          </svg>
+                          <span x-text="downloadingId===w.id ? 'Saving…' : 'Download'"></span>
+                        </button>
+                      </template>
+                      <template x-if="!(w.generationStatus==='COMPLETED' && w.generatedResume?.id)">
+                        <span class="text-xs text-slate-400">—</span>
+                      </template>
+                      <button @click="confirmDeleteLog(w)"
+                              class="text-slate-400 hover:text-red-500 text-xs"
+                              title="Delete log + stored resume">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Delete whole workspace confirm -->
+      <div x-show="deleteFolderTarget" x-cloak class="modal-overlay" @click.self="deleteFolderTarget=null">
+        <div class="modal-box max-w-sm">
+          <div class="px-6 py-5">
+            <p class="font-semibold text-slate-900 mb-1">Delete this workspace?</p>
+            <p x-show="mode==='profile'" class="text-sm text-slate-500">
+              This will permanently remove <strong x-text="(_folderCount(deleteFolderTarget) || 0) + ' logs'"></strong>
+              from <strong x-text="_folderName(deleteFolderTarget)"></strong> AND every stored resume + cover letter
+              from this workspace. The bidder will lose access to download any of them.
+            </p>
+            <p x-show="mode==='bidder'" class="text-sm text-slate-500">
+              This will permanently remove <strong x-text="(_folderCount(deleteFolderTarget) || 0) + ' resumes'"></strong>
+              from <strong x-text="_folderName(deleteFolderTarget)"></strong>, including stored cover letters.
+              The bidder will lose access to this workspace and everything inside it.
+            </p>
+          </div>
+          <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button @click="deleteFolderTarget=null" class="btn-secondary">Cancel</button>
+            <button @click="doDeleteFolder()" :disabled="deleting" class="btn-danger">
+              <span x-text="deleting ? 'Deleting…' : 'Delete workspace'"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete work log confirm -->
+      <div x-show="deleteTarget" x-cloak class="modal-overlay" @click.self="deleteTarget=null">
+        <div class="modal-box max-w-sm">
+          <div class="px-6 py-5">
+            <p class="font-semibold text-slate-900 mb-1">Delete this work log?</p>
+            <p class="text-sm text-slate-500">
+              This will permanently remove the log AND the stored resume + cover letter for
+              <strong x-text="deleteTarget?.companyName"></strong>. The bidder will lose access to download.
+            </p>
+          </div>
+          <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button @click="deleteTarget=null" class="btn-secondary">Cancel</button>
+            <button @click="doDeleteLog()" :disabled="deleting" class="btn-danger">
+              <span x-text="deleting ? 'Deleting…' : 'Delete'"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- JD modal -->
+      <div x-show="openJd" x-cloak class="modal-overlay" @click.self="openJd=null">
+        <div class="modal-box-lg">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-900">Job Description</h2>
+            <button @click="openJd=null" class="text-slate-400 hover:text-slate-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="px-6 py-5 overflow-y-auto flex-1 space-y-4">
+            <template x-if="openJd?.jobLink">
+              <div>
+                <p class="text-xs uppercase tracking-wide text-slate-400 mb-1">Job Link</p>
+                <a :href="openJd.jobLink" target="_blank" rel="noopener"
+                   class="text-sm text-brand hover:underline break-all" x-text="openJd.jobLink"></a>
+              </div>
+            </template>
+            <div>
+              <p class="text-xs uppercase tracking-wide text-slate-400 mb-1">Description</p>
+              <pre class="text-sm text-slate-700 whitespace-pre-wrap font-sans" x-text="openJd?.jobDescription || ''"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ BIDDER DASHBOARD ═══════════ -->
+    <div x-show="page==='bidder-dashboard'" x-data="bidderDashboard()">
+      <div class="mb-6">
+        <h1 class="section-title">Dashboard</h1>
+        <p class="text-slate-500 text-sm mt-1">Welcome back, <span x-text="$store.app.user?.name"></span></p>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="stat-card">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Assigned Profiles</p>
+          <p class="text-2xl font-bold text-slate-900" x-text="stats.profiles ?? '—'"></p>
+        </div>
+        <div class="stat-card">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Resumes</p>
+          <p class="text-2xl font-bold text-slate-900" x-text="stats.generations ?? '—'"></p>
+        </div>
+        <div class="stat-card border border-brand/30 bg-gradient-to-br from-blue-50 to-white">
+          <p class="text-xs font-medium text-brand uppercase tracking-wide">Earnings (7d)</p>
+          <p class="text-2xl font-bold text-brand"
+             x-text="earnings ? ('$' + earnings.totals.earnings.toFixed(2)) : '—'"></p>
+          <p class="text-xs text-slate-500"
+             x-text="earnings ? (earnings.totals.appliedCount + ' applied · ' + earnings.totals.interviewedCount + ' interviewed') : ''"></p>
+        </div>
+        <div class="stat-card flex-row items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Generate</p>
+            <p class="text-sm text-slate-600 mt-1">Ready to apply?</p>
+          </div>
+          <button @click="$store.app.go('bidder-folders')" class="btn-primary whitespace-nowrap">
+            Open
+          </button>
+        </div>
+      </div>
+
+      <!-- Recent generations -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <p class="font-semibold text-slate-800 text-sm">Recent Resumes</p>
+          <button @click="$store.app.go('bidder-folders')" class="text-brand text-xs hover:underline">View all</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-slate-100">
+                <th class="th pl-0">Time</th>
+                <th class="th hidden sm:table-cell">Profile</th>
+                <th class="th">Company</th>
+                <th class="th hidden md:table-cell">Role</th>
+                <th class="th">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="!loaded">
+                <tr><td colspan="5" class="td text-center py-6 text-slate-400">Loading…</td></tr>
+              </template>
+              <template x-if="loaded && recentGens.length===0">
+                <tr><td colspan="5" class="td text-center py-6 text-slate-400">No resumes yet — start generating!</td></tr>
+              </template>
+              <template x-for="g in recentGens" :key="g.id">
+                <tr class="tr">
+                  <td class="td pl-0 text-xs text-slate-400" x-text="fmtTime(g.createdAt)"></td>
+                  <td class="td hidden sm:table-cell text-xs" x-text="g.profile?.fullName||'—'"></td>
+                  <td class="td text-sm font-medium" x-text="g.companyName"></td>
+                  <td class="td hidden md:table-cell text-sm text-slate-500" x-text="g.roleTitle"></td>
+                  <td class="td">
+                    <span :class="'badge-'+g.status.toLowerCase()" class="inline-flex items-center gap-1">
+                      <svg x-show="g.status==='PENDING'||g.status==='PROCESSING'"
+                           class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      <span x-text="g.status"></span>
+                    </span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ BIDDER PROFILES ═══════════ -->
+    <div x-show="page==='bidder-profiles'" x-data="bidderProfiles()">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="section-title">My Profiles</h1>
+      </div>
+      <div class="mb-4">
+        <input x-model="search" @input.debounce.300ms="load(1)" type="search"
+               placeholder="Search profiles…" class="input max-w-sm"/>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-if="loading && items.length===0">
+          <div class="col-span-full text-center py-10 text-slate-400">Loading…</div>
+        </template>
+        <template x-if="!loading && items.length===0">
+          <div class="col-span-full text-center py-10 text-slate-400">No profiles assigned to you yet</div>
+        </template>
+        <template x-for="p in items" :key="p.id">
+          <div class="card flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-brand-muted flex items-center justify-center text-brand font-bold text-sm flex-shrink-0">
+                <span x-text="p.fullName[0].toUpperCase()"></span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-slate-900 text-sm truncate" x-text="p.fullName"></p>
+                <p class="text-xs text-slate-400 truncate" x-text="p.email"></p>
+              </div>
+            </div>
+            <template x-if="p.phoneNumber">
+              <p class="text-xs text-slate-500" x-text="p.phoneNumber"></p>
+            </template>
+            <template x-if="p.defaultPdfTemplate">
+              <span class="badge-active w-fit" x-text="p.defaultPdfTemplate.name"></span>
+            </template>
+            <button @click="generateWith(p.id)" class="btn-primary w-full justify-center mt-auto">
+              Generate Resume
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ═══════════ BIDDER FOLDERS / WORKSPACES ═══════════ -->
+    <div x-show="page==='bidder-folders'" x-data="bidderFolders()">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-2">
+          <button x-show="activeFolder" @click="activeFolder=null; loadFolders()" class="text-slate-400 hover:text-brand">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <h1 class="section-title" x-text="activeFolder ? activeFolder : 'Workspaces'"></h1>
+        </div>
+        <div class="flex items-center gap-2">
+          <template x-if="activeFolder">
+            <button @click="openGenerate()" class="btn-primary">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Generate Resume
+            </button>
+          </template>
+          <template x-if="!activeFolder">
+            <button @click="createFolder()" class="btn-secondary">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              New Workspace
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <!-- New workspace label input -->
+      <div x-show="showNewFolder" x-cloak class="card mb-4 flex items-center gap-3">
+        <input x-model="newLabel" @keyup.enter="doCreateFolder()"
+               class="input flex-1" placeholder="Workspace label (default: today's date)"/>
+        <button @click="doCreateFolder()" class="btn-primary">Create</button>
+        <button @click="showNewFolder=false" class="btn-secondary">Cancel</button>
+      </div>
+
+      <!-- Folders grid -->
+      <div x-show="!activeFolder" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <template x-if="loadingFolders && folders.length===0">
+          <div class="col-span-full text-center py-10 text-slate-400">Loading…</div>
+        </template>
+        <template x-if="!loadingFolders && folders.length===0">
+          <div class="col-span-full text-center py-10 text-slate-400">No workspaces yet — create one to get started</div>
+        </template>
+        <template x-for="f in folders" :key="f.label">
+          <div class="card hover:shadow-md transition cursor-pointer" @click="openFolder(f.label)">
+            <div class="w-10 h-10 bg-brand-light rounded-lg flex items-center justify-center mb-3">
+              <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+              </svg>
+            </div>
+            <p class="font-semibold text-slate-900 text-sm" x-text="f.label"></p>
+            <p class="text-xs text-slate-400 mt-1" x-text="`${f.generationCount} resumes`"></p>
+          </div>
+        </template>
+      </div>
+
+      <!-- ── Folder contents — Submitted Jobs design ── -->
+      <div x-show="activeFolder">
+
+        <!-- Toolbar: search + sort + refresh -->
+        <div class="jt-toolbar">
+          <div class="jt-search">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <input type="text" x-model="gensQuery" placeholder="Search jobs…"/>
+          </div>
+          <select x-model="gensStatus" class="jt-sort">
+            <option value="">All Statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="PROCESSING">Processing</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="FAILED">Failed</option>
+            <option value="NOT_APPLIED">Not Applied</option>
+          </select>
+          <select x-model="gensSort" class="jt-sort">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="title">Role A–Z</option>
+            <option value="company">Company A–Z</option>
+          </select>
+          <button @click="loadGens()" class="jt-refresh" title="Refresh">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M4 4v5h.582M20 20v-5h-.581M4.582 9A8 8 0 0119.418 15M19.419 9a8 8 0 01-14.837 6"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+
+        <div class="jt-panel">
+          <div class="jt-header">
+            <span>S No.</span>
+            <span>Role &amp; Company</span>
+            <span>Submitted</span>
+            <span>Status</span>
+            <span>Duration</span>
+            <span>Job Link</span>
+            <span>Skip Reason</span>
+            <span>Actions</span>
+          </div>
+
+          <template x-if="!_gensLoaded">
+            <div class="jt-empty"><div class="sub">Loading…</div></div>
+          </template>
+
+          <template x-if="_gensLoaded && filteredGens.length===0">
+            <div class="jt-empty">
+              <div class="ico">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                  <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M12 12h.01M12 16h.01"/>
+                </svg>
+              </div>
+              <div class="title" x-text="gens.length===0 ? 'No resumes in this workspace yet' : 'No results found'"></div>
+              <div class="sub" x-text="gens.length===0 ? 'Generate one with the button above.' : 'Try adjusting your search, status filter, or sort.'"></div>
+            </div>
+          </template>
+
+          <template x-for="(g, idx) in filteredGens" :key="g.id">
+            <div class="jt-row" :class="openRowId===g.id && 'is-open'">
+              <div class="jt-row-main" @click="toggleRow(g.id)">
+                <div class="jt-center">
+                  <span class="text-xs font-semibold text-slate-500"
+                        x-text="filteredGens.length - idx"></span>
+                </div>
+                <div class="jt-title-cell">
+                  <div class="jt-title" x-text="g.roleTitle || 'Untitled Role'"></div>
+                  <div class="jt-meta">
+                    <span x-text="g.companyName"></span>
+                  </div>
+                </div>
+                <div class="jt-date jt-center">
+                  <div>
+                    <div class="jt-date-main" x-text="fmtDate(g.createdAt)"></div>
+                    <div class="jt-date-time" x-text="fmtTimeShort(g.createdAt)"></div>
+                  </div>
+                </div>
+                <div class="jt-center">
+                  <span class="ps-badge" :class="'ps-' + (statusLabelOf(g).key)" x-text="statusLabelOf(g).label"></span>
+                </div>
+                <div class="jt-duration jt-center" x-text="durationOf(g.createdAt, g.completedAt) || '—'"></div>
+                <div class="jt-center">
+                  <template x-if="g.jobLink">
+                    <a :href="g.jobLink" target="_blank" rel="noopener" class="jt-linkbtn" @click.stop>
+                      View
+                      <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
+                      </svg>
+                    </a>
+                  </template>
+                  <template x-if="!g.jobLink">
+                    <span style="font-size:12px;color:var(--jt-slate-lite);">—</span>
+                  </template>
+                </div>
+                <!-- Skip Reason cell -->
+                <div class="jt-note-cell" @click.stop x-data="{
+                  open: false,
+                  draft: g.noApplyReason || '',
+                  saving: false,
+                  async save() {
+                    this.saving = true;
+                    try {
+                      const { data } = await axios.patch(`${API}/api/bidder/generations/${g.id}/note`, { reason: this.draft });
+                      g.noApplyReason = data.data.noApplyReason;
+                      this.open = false;
+                    } catch(e) { console.error(e); }
+                    finally { this.saving = false; }
+                  },
+                  cancel() { this.draft = g.noApplyReason || ''; this.open = false; }
+                }">
+                  <template x-if="!open">
+                    <button class="jt-note-btn" :class="g.noApplyReason ? 'has-note' : ''"
+                            @click="open=true; draft=g.noApplyReason||''"
+                            :title="g.noApplyReason || 'Add skip reason'">
+                      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                      <span x-text="g.noApplyReason || 'Add note'"></span>
+                    </button>
+                  </template>
+                  <template x-if="open">
+                    <div class="jt-note-editor">
+                      <textarea class="jt-note-editor" x-model="draft" rows="2"
+                                placeholder="Why didn't you apply?"
+                                @keydown.escape="cancel()"></textarea>
+                      <div class="jt-note-editor-btns">
+                        <button class="jt-note-save" @click="save()" :disabled="saving"
+                                x-text="saving ? 'Saving…' : 'Save'"></button>
+                        <button class="jt-note-cancel" @click="cancel()">Cancel</button>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+
+                <div class="jt-actions" @click.stop>
+                  <template x-if="g.status==='COMPLETED'">
+                    <button class="jt-iconbtn download" :disabled="downloadingId===g.id"
+                            title="Download" @click="download(g, filteredGens.length - idx)">
+                      <svg x-show="downloadingId!==g.id" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                      </svg>
+                      <svg x-show="downloadingId===g.id" class="animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                    </button>
+                  </template>
+                  <button class="jt-iconbtn" title="Regenerate" @click="regenerateFrom(g)"
+                          style="color:#7c3aed;">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path d="M4 4v5h.582M20 20v-5h-.581M5.635 19A9 9 0 104.583 9.5H4"/>
+                    </svg>
+                  </button>
+                  <button class="jt-iconbtn" title="Toggle details" @click="toggleRow(g.id)">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                         :style="openRowId===g.id ? 'transform:rotate(180deg)' : ''">
+                      <path d="M19 9l-7 7-7-7"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="jt-expand">
+                <div class="jt-expand-inner" x-data="qaPanel(g.id)">
+                  <template x-if="g.jobLink">
+                    <div style="margin-bottom:12px;">
+                      <p style="font-size:11px;font-weight:700;color:var(--jt-slate);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">Job Link</p>
+                      <a :href="g.jobLink" target="_blank" rel="noopener"
+                         style="font-size:13px;color:var(--jt-blue);word-break:break-all;" x-text="g.jobLink"></a>
+                    </div>
+                  </template>
+                  <p style="font-size:11px;font-weight:700;color:var(--jt-slate);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;">Job Description</p>
+                  <pre class="jt-jd-text" x-text="g.jobDescription || '—'"></pre>
+                  <template x-if="g.status==='FAILED' && g.errorMessage">
+                    <div style="margin-top:14px;padding:10px 12px;background:var(--jt-red-bg);border:1px solid #fecaca;border-radius:8px;color:#991b1b;font-size:12px;" x-text="'Error: ' + g.errorMessage"></div>
+                  </template>
+
+                  <!-- ── Q&A: ATS question answerer ────────────────────────── -->
+                  <template x-if="g.status==='COMPLETED'">
+                    <div style="margin-top:18px;padding-top:16px;border-top:1px dashed var(--jt-border);">
+                      <p style="font-size:11px;font-weight:700;color:var(--jt-slate);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">
+                        Ask AI About This Job
+                      </p>
+                      <p style="font-size:12px;color:var(--jt-slate-lite);margin-bottom:10px;">
+                        Paste any ATS application question and get a humanized, professional answer grounded in this resume + JD.
+                      </p>
+
+                      <textarea x-model="question" rows="3"
+                                placeholder="e.g. Why are you interested in this role? / Describe your experience with X."
+                                style="width:100%;padding:10px 12px;border:1.5px solid var(--jt-border);border-radius:8px;font-family:inherit;font-size:13px;color:var(--jt-ink);background:white;outline:none;resize:vertical;"
+                                @keydown="qaError=''"></textarea>
+
+                      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;">
+                        <button @click="ask()" :disabled="asking || !question.trim()"
+                                style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--jt-blue);color:white;font-size:13px;font-weight:600;border:none;border-radius:8px;cursor:pointer;transition:opacity 150ms;"
+                                :style="(asking || !question.trim()) ? 'opacity:0.55;cursor:not-allowed;' : ''">
+                          <svg x-show="!asking" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width:14px;height:14px;">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                          </svg>
+                          <svg x-show="asking" class="animate-spin" fill="none" viewBox="0 0 24 24" style="width:14px;height:14px;">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                          </svg>
+                          <span x-text="asking ? 'Thinking…' : 'Ask AI'"></span>
+                        </button>
+                        <template x-if="qaError">
+                          <span style="font-size:12px;color:var(--jt-red);" x-text="qaError"></span>
+                        </template>
+                      </div>
+
+                      <template x-if="answer">
+                        <div style="margin-top:14px;background:var(--jt-off-white);border:1px solid var(--jt-border);border-radius:10px;padding:14px;">
+                          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <p style="font-size:11px;font-weight:700;color:var(--jt-slate);letter-spacing:.5px;text-transform:uppercase;">Answer</p>
+                            <button @click="copy()"
+                                    style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--jt-blue);background:none;border:none;cursor:pointer;font-weight:600;">
+                              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:13px;height:13px;">
+                                <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2h-8a2 2 0 01-2-2V8z"/>
+                              </svg>
+                              <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                            </button>
+                          </div>
+                          <pre style="font-family:'Inter',system-ui,sans-serif;font-size:13px;color:var(--jt-ink-soft);line-height:1.65;white-space:pre-wrap;margin:0;" x-text="answer"></pre>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Generate Modal -->
+      <div x-show="genModal" x-cloak class="modal-overlay" @click.self="genModal=false">
+        <div class="modal-box-lg">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-900">Generate Resume</h2>
+            <button @click="genModal=false" class="text-slate-400 hover:text-slate-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+            <div x-show="genError" class="px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg" x-text="genError"></div>
+            <div>
+              <label class="label">Profile *</label>
+              <select x-model="genForm.profileId" class="input">
+                <template x-if="!myProfiles.length">
+                  <option value="">No profiles assigned</option>
+                </template>
+                <template x-for="p in myProfiles" :key="p.id">
+                  <option :value="p.id" x-text="p.fullName"></option>
+                </template>
+              </select>
+            </div>
+            <div class="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label class="label">Company Name *</label>
+                <input x-model="genForm.companyName" class="input" placeholder="Acme Corp"/>
+              </div>
+              <div>
+                <label class="label">Role Title *</label>
+                <input x-model="genForm.roleTitle" class="input" placeholder="Senior Engineer"/>
+              </div>
+            </div>
+            <div>
+              <label class="label">Job Link</label>
+              <input x-model="genForm.jobLink" type="url" class="input"
+                     placeholder="https://example.com/jobs/12345 (optional)"/>
+            </div>
+            <div>
+              <label class="label">Job Description *</label>
+              <textarea x-model="genForm.jobDescription" class="input" rows="8"
+                        placeholder="Paste the full job description here…"></textarea>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button @click="genModal=false" class="btn-secondary">Cancel</button>
+            <button @click="submitGenerate()" :disabled="generating" class="btn-primary">
+              <svg x-show="generating" class="spinner" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              <span x-text="generating ? 'Submitting…' : 'Generate'"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         ANALYTICS — shared shell for admin + bidder. Backend decides what's
+         visible (admin gets per-bidder breakdown; bidder gets own row).
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div x-show="page==='admin-analytics' || page==='bidder-analytics'"
+         x-data="analyticsPage()" x-init="init()">
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="section-title">Analytics</h1>
+      </div>
+
+      <!-- Date-range toolbar -->
+      <div class="card mb-4">
+        <div class="flex flex-wrap items-end gap-3">
+          <div>
+            <label class="label">From</label>
+            <input x-model="dateFrom" type="date" class="input"/>
+          </div>
+          <div>
+            <label class="label">To</label>
+            <input x-model="dateTo" type="date" class="input"/>
+          </div>
+          <button @click="load()" :disabled="loading" class="btn-primary">
+            <span x-text="loading ? 'Loading…' : 'Apply'"></span>
+          </button>
+          <div class="ml-auto flex flex-wrap gap-2">
+            <button @click="setQuick(0)"  class="btn-secondary text-xs">Today</button>
+            <button @click="setQuick(6)"  class="btn-secondary text-xs">7d</button>
+            <button @click="setQuick(29)" class="btn-secondary text-xs">30d</button>
+            <button @click="setMonth()"   class="btn-secondary text-xs">Month-to-date</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Totals -->
+      <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div class="stat-card">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Applied</p>
+          <p class="text-2xl font-bold text-slate-900" x-text="data ? data.totals.appliedCount : '—'"></p>
+        </div>
+        <div class="stat-card">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Interviewed</p>
+          <p class="text-2xl font-bold text-slate-900" x-text="data ? data.totals.interviewedCount : '—'"></p>
+        </div>
+        <div class="stat-card border border-brand/30 bg-gradient-to-br from-blue-50 to-white col-span-2 lg:col-span-1">
+          <p class="text-xs font-medium text-brand uppercase tracking-wide">Earnings</p>
+          <p class="text-2xl font-bold text-brand"
+             x-text="data ? ('$' + data.totals.earnings.toFixed(2)) : '—'"></p>
+          <template x-if="$store.app.user?.role === 'BIDDER' && data">
+            <p class="text-xs text-slate-500 mt-0.5"
+               x-text="'$' + (data.appliedRate||0).toFixed(2) + ' per applied · $' + (data.interviewRate||0).toFixed(2) + ' per interview'"></p>
+          </template>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="card mb-4">
+        <p class="text-sm font-semibold text-slate-700 mb-4">Applications per day</p>
+        <canvas id="analyticsChart" height="80"></canvas>
+      </div>
+
+      <!-- Per-bidder breakdown (admin only) -->
+      <template x-if="$store.app.user?.role === 'ADMIN'">
+        <div class="card">
+          <p class="text-sm font-semibold text-slate-700 mb-3">Per-bidder breakdown</p>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-slate-100">
+                  <th class="th pl-0">Bidder</th>
+                  <th class="th text-right">Applied</th>
+                  <th class="th text-right">Interviewed</th>
+                  <th class="th text-right">Rates</th>
+                  <th class="th text-right pr-0">Earnings</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-if="!data || data.breakdown.length===0">
+                  <tr><td colspan="5" class="td text-center py-6 text-slate-400">No activity in this range.</td></tr>
+                </template>
+                <template x-for="row in (data ? data.breakdown : [])" :key="row.bidder.id">
+                  <tr class="tr">
+                    <td class="td pl-0">
+                      <p class="font-medium text-slate-800 text-sm" x-text="row.bidder.name"></p>
+                      <p class="text-xs text-slate-400" x-text="row.bidder.email"></p>
+                    </td>
+                    <td class="td text-right" x-text="row.appliedCount"></td>
+                    <td class="td text-right" x-text="row.interviewedCount"></td>
+                    <td class="td text-right text-xs text-slate-500"
+                        x-text="'$' + row.appliedRate.toFixed(2) + ' / $' + row.interviewRate.toFixed(2)"></td>
+                    <td class="td text-right pr-0 font-semibold text-brand"
+                        x-text="'$' + row.earnings.toFixed(2)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ═══════════ JOB TRACKER ═══════════ -->
+    <div x-show="page==='admin-jobtracker'" x-data="adminJobTracker()" x-init="init()">
+
+      <!-- Header row -->
+      <div class="flex items-center gap-3 mb-6">
+        <button x-show="level===1" @click="goBack()"
+                class="text-slate-400 hover:text-brand transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div>
+          <h1 class="section-title" x-text="level===0 ? 'Job Tracker' : selectedProfile.profile.fullName"></h1>
+          <p class="text-xs text-slate-400 mt-0.5"
+             x-show="level===0">Click a profile to see all submitted jobs across every workspace.</p>
+          <p class="text-xs text-slate-400 mt-0.5"
+             x-show="level===1" x-text="jobs.length + ' total jobs'"></p>
+        </div>
+      </div>
+
+      <!-- Level 0: profile cards -->
+      <div x-show="level===0">
+        <template x-if="loading && profiles.length===0">
+          <div class="text-center py-16 text-slate-400">Loading…</div>
+        </template>
+        <template x-if="!loading && profiles.length===0">
+          <div class="card px-6 py-16 text-center text-sm text-slate-400">
+            No profiles with submitted jobs yet.
+          </div>
+        </template>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template x-for="p in profiles" :key="p.profile.id">
+            <div class="card hover:shadow-md transition cursor-pointer" @click="drillProfile(p)">
+              <div class="flex items-start justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-full bg-brand-muted flex items-center justify-center text-brand font-bold text-xs flex-shrink-0"
+                       x-text="p.profile.fullName[0].toUpperCase()"></div>
+                  <div>
+                    <p class="font-semibold text-slate-900 text-sm" x-text="p.profile.fullName"></p>
+                    <p class="text-xs text-slate-400 mt-0.5" x-text="p.profile.email"></p>
+                  </div>
+                </div>
+                <span class="text-xs font-medium text-brand bg-brand-light px-2 py-0.5 rounded-full"
+                      x-text="p.logCount + ' jobs'"></span>
+              </div>
+              <p class="text-xs text-slate-400 mt-3"
+                 x-text="p.lastActivityAt ? 'Last: ' + fmtDate(p.lastActivityAt) : 'No activity'"></p>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- JD modal -->
+      <div x-show="openJd" x-cloak class="modal-overlay" @click.self="openJd=null">
+        <div class="modal-box max-w-2xl">
+          <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="font-semibold text-slate-900">Job Description</h3>
+            <button @click="openJd=null" class="text-slate-400 hover:text-slate-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="px-6 py-4">
+            <template x-if="openJd?.jobLink">
+              <div class="mb-3">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Job Link</p>
+                <a :href="openJd.jobLink" target="_blank" rel="noopener"
+                   class="text-sm text-brand hover:underline break-all" x-text="openJd.jobLink"></a>
+              </div>
+            </template>
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Description</p>
+            <pre class="text-sm text-slate-700 whitespace-pre-wrap font-sans" x-text="openJd?.jobDescription || ''"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Level 1: flat jobs table -->
+      <div x-show="level===1">
+        <!-- Search + filter toolbar -->
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+          <div class="relative flex-1 min-w-[200px] max-w-sm">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <input type="text" x-model="companySearch" @input="onSearchInput()"
+                   placeholder="Search by company…"
+                   class="input pl-9 text-sm"/>
+          </div>
+          <select x-model="statusFilter" class="input text-sm max-w-[180px]">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Generating</option>
+            <option value="failed">Failed</option>
+            <option value="generated">Generated</option>
+            <option value="downloaded">Downloaded</option>
+            <option value="qa">Q &amp; A</option>
+            <option value="applied">Applied</option>
+            <option value="interviewed">Interviewed</option>
+            <option value="not_applied">Not Applied</option>
+          </select>
+          <span class="text-xs text-slate-400"
+                x-text="filteredJobs.length + ' of ' + jobs.length + ' rows'"></span>
+        </div>
+
+        <template x-if="loading">
+          <div class="card px-6 py-10 text-center text-sm text-slate-400">Loading…</div>
+        </template>
+
+        <template x-if="!loading">
+          <div class="card overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
+              <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th class="th w-10">No.</th>
+                  <th class="th">Date</th>
+                  <th class="th">Company</th>
+                  <th class="th">Role</th>
+                  <th class="th">Bidder</th>
+                  <th class="th">Workspace</th>
+                  <th class="th">Job Desc.</th>
+                  <th class="th">Status</th>
+                  <th class="th">Skip Reason</th>
+                  <th class="th">Duration</th>
+                  <th class="th">Download</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <template x-if="filteredJobs.length===0">
+                  <tr>
+                    <td colspan="11" class="td text-center py-10 text-slate-400"
+                        x-text="jobs.length===0 ? 'No jobs found.' : 'No rows match the current filters.'"></td>
+                  </tr>
+                </template>
+                <template x-for="(w, idx) in filteredJobs" :key="w.id">
+                  <tr class="tr">
+                    <td class="td text-xs font-semibold text-slate-500 text-center"
+                        x-text="filteredJobs.length - idx"></td>
+                    <td class="td text-xs text-slate-400" x-text="fmtDate(w.createdAt)"></td>
+                    <td class="td font-medium text-slate-800" x-text="w.companyName"></td>
+                    <td class="td text-slate-500" x-text="w.roleTitle"></td>
+                    <td class="td text-xs" x-text="w.bidder?.name || '—'"></td>
+                    <td class="td text-xs text-slate-400" x-text="w.generatedResume?.folderLabel || w.folderLabel || '—'"></td>
+                    <td class="td">
+                      <template x-if="w.generatedResume?.jobDescription">
+                        <button class="text-brand hover:underline text-xs font-medium"
+                                @click="openJd = w.generatedResume">View</button>
+                      </template>
+                      <template x-if="!w.generatedResume?.jobDescription">
+                        <span class="text-xs text-slate-400">—</span>
+                      </template>
+                    </td>
+                    <td class="td">
+                      <span class="ps-badge" :class="'ps-' + statusLabelOf(_logRow(w)).key"
+                            x-text="statusLabelOf(_logRow(w)).label"></span>
+                    </td>
+                    <td class="td text-xs max-w-[160px]">
+                      <template x-if="w.generatedResume?.noApplyReason">
+                        <span class="inline-block rounded bg-amber-50 px-2 py-0.5 text-amber-800 border border-amber-200"
+                              :title="w.generatedResume.noApplyReason"
+                              x-text="w.generatedResume.noApplyReason"></span>
+                      </template>
+                      <template x-if="!w.generatedResume?.noApplyReason">
+                        <span class="text-slate-300">—</span>
+                      </template>
+                    </td>
+                    <td class="td text-xs text-slate-400"
+                        x-text="durationOf(w.createdAt, w.completedAt || w.generatedResume?.completedAt) || '—'"></td>
+                    <td class="td">
+                      <template x-if="w.generationStatus==='COMPLETED' && w.generatedResume?.id">
+                        <button @click="downloadResume(w, filteredJobs.length - idx)"
+                                :disabled="downloadingId===w.id"
+                                class="inline-flex items-center gap-1 text-brand hover:text-brand-dark text-xs font-medium disabled:opacity-50">
+                          <svg x-show="downloadingId===w.id" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                          </svg>
+                          <span x-text="downloadingId===w.id ? 'Saving…' : 'Download'"></span>
+                        </button>
+                      </template>
+                      <template x-if="!(w.generationStatus==='COMPLETED' && w.generatedResume?.id)">
+                        <span class="text-xs text-slate-400">—</span>
+                      </template>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                                                  -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<script>
+const API = window.location.origin;
+
+// ── Axios defaults ──────────────────────────────────────────────────────────
+axios.interceptors.request.use(cfg => {
+  const t = localStorage.getItem('rt_access');
+  if (t) cfg.headers['Authorization'] = `Bearer ${t}`;
+  return cfg;
+});
+
+let _refreshing = false;
+axios.interceptors.response.use(r => r, async err => {
+  const orig = err.config;
+  if (err.response?.status === 401 && !orig._retry
+      && !orig.url.includes('/auth/login') && !orig.url.includes('/auth/refresh')) {
+    if (_refreshing) return Promise.reject(err);
+    orig._retry = true;
+    _refreshing = true;
+    try {
+      const rt = localStorage.getItem('rt_refresh');
+      if (!rt) throw new Error('no refresh token');
+      const { data } = await axios.post(`${API}/api/auth/refresh`, { refreshToken: rt });
+      localStorage.setItem('rt_access', data.accessToken);
+      localStorage.setItem('rt_refresh', data.refreshToken);
+      orig.headers['Authorization'] = `Bearer ${data.accessToken}`;
+      return axios(orig);
+    } catch {
+      localStorage.clear();
+      window.location.href = '/login';
+    } finally { _refreshing = false; }
+  }
+  return Promise.reject(err);
+});
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+function fmtTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function fmtTimeShort(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+}
+
+/**
+ * Resolve what to show in the status badge for a generation.
+ * Priority:
+ *   - AI still running (status = PENDING|PROCESSING) → show that
+ *   - AI failed → "Failed"
+ *   - Otherwise → use progressStatus (fallback to "Generated" if AI completed but no pipeline status yet)
+ * Returns { key: cssSuffix, label: humanText }.
+ */
+function statusLabelOf(g) {
+  const ai = (g.status || '').toUpperCase();
+  if (ai === 'PENDING')    return { key: 'pending',    label: 'Pending' };
+  if (ai === 'PROCESSING') return { key: 'processing', label: 'Generating' };
+  if (ai === 'FAILED')     return { key: 'failed',     label: 'Failed' };
+  const p = (g.progressStatus || 'GENERATED').toUpperCase();
+  const map = {
+    GENERATED:   { key: 'generated',   label: 'Generated' },
+    DOWNLOADED:  { key: 'downloaded',  label: 'Downloaded' },
+    QA:          { key: 'qa',          label: 'Q & A' },
+    APPLIED:     { key: 'applied',     label: 'Applied' },
+    INTERVIEWED: { key: 'interviewed', label: 'Interviewed' },
+    FAILED:      { key: 'failed',      label: 'Failed' },
+  };
+  return map[p] || map.GENERATED;
+}
+
+/** Numeric rank for progress_status — used by the admin UI to disable
+    actions that would not change anything. Mirrors db.py PROGRESS_RANK. */
+const PROGRESS_RANK = {
+  GENERATED: 1, DOWNLOADED: 2, QA: 3, APPLIED: 4, INTERVIEWED: 5, FAILED: 99,
+};
+function progressRank(name) {
+  return PROGRESS_RANK[(name || '').toUpperCase()] || 0;
+}
+
+// ── Q&A panel for a single generation ────────────────────────────────────────
+function qaPanel(genId) {
+  return {
+    genId,
+    question: '',
+    answer:   '',
+    asking:   false,
+    qaError:  '',
+    copied:   false,
+
+    async ask() {
+      const q = (this.question || '').trim();
+      if (!q || this.asking) return;
+      this.asking = true; this.qaError = ''; this.answer = '';
+      try {
+        const {data} = await axios.post(
+          `${API}/api/bidder/generations/${this.genId}/qa`, { question: q });
+        this.answer = data.data?.answer || '';
+        if (!this.answer) this.qaError = 'Empty answer received.';
+      } catch (e) {
+        this.qaError = e.response?.data?.error || 'Failed to get an answer.';
+      } finally {
+        this.asking = false;
+      }
+    },
+
+    async copy() {
+      if (!this.answer) return;
+      try {
+        await navigator.clipboard.writeText(this.answer);
+        this.copied = true;
+        setTimeout(() => { this.copied = false; }, 1500);
+      } catch {
+        // fallback: select + execCommand (older browsers)
+        const ta = document.createElement('textarea');
+        ta.value = this.answer; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy'); ta.remove();
+        this.copied = true;
+        setTimeout(() => { this.copied = false; }, 1500);
+      }
+    },
+  };
+}
+function durationOf(startIso, endIso) {
+  if (!startIso || !endIso) return null;
+  const ms = new Date(endIso) - new Date(startIso);
+  if (!isFinite(ms) || ms < 0) return null;
+  const totalSec = Math.round(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+function isoDate(d) {
+  // YYYY-MM-DD in local time, for <input type="date"> values.
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+// ── Alpine store ─────────────────────────────────────────────────────────────
+document.addEventListener('alpine:init', () => {
+  Alpine.store('app', {
+    page: '',
+    user: null,
+    go(p) { this.page = p; window.dispatchEvent(new CustomEvent('page-changed', { detail: p })); },
+  });
+});
+
+// ── App Shell ────────────────────────────────────────────────────────────────
+function appShell() {
+  return {
+    sidebarOpen: false,
+    page: '',
+    user: null,
+
+    init() {
+      const u = localStorage.getItem('rt_user');
+      const t = localStorage.getItem('rt_access');
+      if (!u || !t) { window.location.href = '/login'; return; }
+      try { this.user = JSON.parse(u); } catch { window.location.href = '/login'; return; }
+      Alpine.store('app').user = this.user;
+      const defaultPage = this.user.role === 'ADMIN' ? 'admin-dashboard' : 'bidder-dashboard';
+      this.go(defaultPage);
+      window.addEventListener('page-changed', e => this.page = e.detail);
+    },
+
+    go(p) {
+      this.page = p;
+      Alpine.store('app').go(p);
+      if (window.innerWidth < 1024) this.sidebarOpen = false;
+    },
+
+    async logout() {
+      try {
+        const rt = localStorage.getItem('rt_refresh');
+        if (rt) await axios.post(`${API}/api/auth/logout`, { refreshToken: rt });
+      } catch {}
+      localStorage.clear();
+      window.location.href = '/login';
+    },
+  };
+}
+
+// ── Admin Dashboard ──────────────────────────────────────────────────────────
+function adminDashboard() {
+  return {
+    stats: {},
+    earnings: null,
+    chart: null,
+
+    async init() {
+      this.$watch('$store.app.page', p => { if (p === 'admin-dashboard') this.load(); });
+      if (Alpine.store('app').page === 'admin-dashboard') this.load();
+    },
+
+    async load() {
+      try {
+        const [statsRes, chartRes, earningsRes] = await Promise.all([
+          axios.get(`${API}/api/admin/analytics/stats`),
+          axios.get(`${API}/api/admin/analytics/resumes-per-day?days=7`),
+          axios.get(`${API}/api/admin/analytics/earnings`),
+        ]);
+        this.stats    = statsRes.data.data;
+        this.earnings = earningsRes.data.data;
+        this.renderChart(chartRes.data.data);
+      } catch (e) { console.error(e); }
+    },
+
+    renderChart(data) {
+      const ctx = document.getElementById('resumeChart');
+      if (!ctx) return;
+      if (this.chart) this.chart.destroy();
+      this.chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.map(d => d.date),
+          datasets: [{ label: 'Resumes', data: data.map(d => d.count),
+            backgroundColor: '#2563eb22', borderColor: '#2563eb',
+            borderWidth: 2, borderRadius: 6 }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+      });
+    },
+  };
+}
+
+// ── Admin Bidders ────────────────────────────────────────────────────────────
+function adminBidders() {
+  return {
+    items: [], pagination: { page:1, pageSize:20, total:0, totalPages:1 },
+    search: '', loading: false,
+    modal: false, editing: null, form: {}, formError: '', saving: false,
+    deleteTarget: null,
+
+    async init() {
+      this.$watch('$store.app.page', p => { if (p==='admin-bidders') this.load(1); });
+      if (Alpine.store('app').page==='admin-bidders') this.load(1);
+    },
+
+    async load(page=1) {
+      this.loading = true;
+      try {
+        const { data } = await axios.get(`${API}/api/admin/bidders`, {
+          params: { page, pageSize: 20, search: this.search }
+        });
+        this.items = data.data; this.pagination = data.pagination;
+      } catch(e){ console.error(e); } finally { this.loading = false; }
+    },
+
+    openCreate() {
+      this.editing = null;
+      this.form = { name:'', email:'', password:'', isActive:true,
+                    appliedRate: 0.05, interviewRate: 0.50 };
+      this.formError = ''; this.modal = true;
+    },
+    openEdit(b) {
+      this.editing = b;
+      this.form = { name: b.name, password:'', isActive: b.isActive,
+                    appliedRate:   b.appliedRate   ?? 0.05,
+                    interviewRate: b.interviewRate ?? 0.50 };
+      this.formError = ''; this.modal = true;
+    },
+    async save() {
+      this.formError = ''; this.saving = true;
+      try {
+        if (this.editing) {
+          const payload = {
+            name: this.form.name, isActive: this.form.isActive,
+            appliedRate:   this.form.appliedRate,
+            interviewRate: this.form.interviewRate,
+          };
+          if (this.form.password) payload.password = this.form.password;
+          await axios.patch(`${API}/api/admin/bidders/${this.editing.id}`, payload);
+        } else {
+          if (!this.form.email || !this.form.name || !this.form.password)
+            return (this.formError = 'All fields required');
+          await axios.post(`${API}/api/admin/bidders`, this.form);
+          // Persist rates separately on create (POST endpoint may not accept them).
+          // The PATCH path will be used by admin if they edit later.
+        }
+        this.modal = false; this.load(this.pagination.page);
+      } catch(e){ this.formError = e.response?.data?.error || 'Save failed'; }
+      finally { this.saving = false; }
+    },
+    confirmDelete(b) { this.deleteTarget = b; },
+    async doDelete() {
+      this.saving = true;
+      try {
+        await axios.delete(`${API}/api/admin/bidders/${this.deleteTarget.id}`);
+        this.deleteTarget = null; this.load(1);
+      } catch(e){ alert(e.response?.data?.error||'Delete failed'); }
+      finally { this.saving = false; }
+    },
+    fmtDate,
+  };
+}
+
+// ── Admin Profiles ───────────────────────────────────────────────────────────
+function adminProfiles() {
+  return {
+    items: [], pagination: { page:1, pageSize:20, total:0, totalPages:1 },
+    search: '', loading: false, templates: [],
+    modal: false, editing: null, form: {}, formError: '', saving: false,
+    deleteTarget: null,
+    detailModal: false, selected: null,
+    assignments: [], availableBidders: [], assignBidderId: '', assigning: false,
+
+    async init() {
+      this.$watch('$store.app.page', p => { if (p==='admin-profiles') this.load(1); });
+      if (Alpine.store('app').page==='admin-profiles') this.load(1);
+    },
+
+    async load(page=1) {
+      this.loading = true;
+      try {
+        const [profRes, tmplRes] = await Promise.all([
+          axios.get(`${API}/api/admin/profiles`, { params:{page,pageSize:20,search:this.search} }),
+          axios.get(`${API}/api/admin/templates/available`),
+        ]);
+        this.items = profRes.data.data; this.pagination = profRes.data.pagination;
+        this.templates = tmplRes.data.data;
+      } catch(e){ console.error(e); } finally { this.loading = false; }
+    },
+
+    _blank() {
+      return {
+        fullName:'', email:'', phoneNumber:'', linkedinUrl:'', address:'',
+        masterPrompt:'',
+        aiProvider:'anthropic', aiModel:'claude-sonnet-4-20250514',
+        defaultPdfTemplateId:'',
+        experiences: [{ company:'', location:'', period:'', size:'' }],
+        education:   { degree:'', discipline:'', university:'', period:'' },
+      };
+    },
+    addExperience()      { this.form.experiences.push({ company:'', location:'', period:'', size:'' }); },
+    removeExperience(i)  { this.form.experiences.splice(i, 1); },
+    openCreate() { this.editing=null; this.form=this._blank(); this.formError=''; this.modal=true; },
+    openEdit(p) {
+      this.editing = p;
+      this.form = {
+        fullName:    p.fullName,
+        email:       p.email,
+        phoneNumber: p.phoneNumber||'',
+        linkedinUrl: p.linkedinUrl||'',
+        address:     p.address||'',
+        masterPrompt: p.masterPrompt||'',
+        aiProvider:  p.aiProvider||'anthropic',
+        aiModel:     p.aiModel||'',
+        defaultPdfTemplateId: p.defaultPdfTemplateId||'',
+        experiences: (p.experiences && p.experiences.length)
+                       ? p.experiences.map(e => ({
+                           company:  e.company  || '',
+                           location: e.location || '',
+                           period:   e.period   || '',
+                           size:     e.size     || '',
+                         }))
+                       : [{ company:'', location:'', period:'', size:'' }],
+        education:   {
+          degree:     p.education?.degree     || '',
+          discipline: p.education?.discipline || '',
+          university: p.education?.university || '',
+          period:     p.education?.period     || '',
+        },
+      };
+      this.formError=''; this.modal=true; this.detailModal=false;
+    },
+    async save() {
+      this.formError=''; this.saving=true;
+      try {
+        if (!this.form.fullName || !this.form.email)
+          return (this.formError = 'Full name and email are required');
+        const hasExperience = this.form.experiences.some(e => (e.company||'').trim());
+        const hasLegacyPrompt = !!(this.form.masterPrompt || '').trim();
+        if (!hasExperience && !hasLegacyPrompt)
+          return (this.formError = 'Add at least one work experience');
+
+        const payload = {
+          fullName:    this.form.fullName,
+          email:       this.form.email,
+          phoneNumber: this.form.phoneNumber,
+          linkedinUrl: this.form.linkedinUrl,
+          address:     this.form.address,
+          masterPrompt: (this.form.masterPrompt || '').trim(),
+          aiProvider:  this.form.aiProvider,
+          aiModel:     this.form.aiModel,
+          defaultPdfTemplateId: this.form.defaultPdfTemplateId || null,
+          experiences: this.form.experiences
+                         .filter(e => (e.company||'').trim())
+                         .map(e => ({
+                           company:  (e.company  || '').trim(),
+                           location: (e.location || '').trim(),
+                           period:   (e.period   || '').trim(),
+                           size:     (e.size     || '').trim() || null,
+                         })),
+          education:   {
+            degree:     (this.form.education.degree     || '').trim(),
+            discipline: (this.form.education.discipline || '').trim(),
+            university: (this.form.education.university || '').trim(),
+            period:     (this.form.education.period     || '').trim(),
+          },
+        };
+
+        if (this.editing)
+          await axios.patch(`${API}/api/admin/profiles/${this.editing.id}`, payload);
+        else
+          await axios.post(`${API}/api/admin/profiles`, payload);
+        this.modal=false; this.load(this.pagination.page);
+      } catch(e){ this.formError = e.response?.data?.error||'Save failed'; }
+      finally { this.saving=false; }
+    },
+    async openDetail(p) {
+      this.selected = p; this.detailModal = true;
+      this.assignments = []; this.availableBidders = []; this.assignBidderId = '';
+      try {
+        const [aRes, bRes] = await Promise.all([
+          axios.get(`${API}/api/admin/profiles/${p.id}/assignments`),
+          axios.get(`${API}/api/admin/bidders`, { params:{pageSize:100} }),
+        ]);
+        this.assignments = aRes.data.data || [];
+        const assignedIds = new Set(this.assignments.map(a => a.bidderId));
+        const allBidders  = bRes.data.data || [];
+        this.availableBidders = allBidders.filter(b => !assignedIds.has(b.id) && b.isActive);
+        console.log('[openDetail]', { profile: p.fullName,
+          assignments: this.assignments.length,
+          totalBidders: allBidders.length,
+          available: this.availableBidders.length });
+      } catch (e) {
+        console.error('[openDetail] failed:', e?.response?.status, e?.response?.data || e?.message);
+        alert('Failed to load bidder list: ' + (e?.response?.data?.error || e?.message || 'unknown'));
+      }
+    },
+    async assign() {
+      if (!this.assignBidderId) return;
+      this.assigning=true;
+      try {
+        await axios.post(`${API}/api/admin/profiles/${this.selected.id}/assignments`,
+                         { bidderId: this.assignBidderId });
+        this.assignBidderId='';
+        await this.openDetail(this.selected);
+      } catch(e){ alert(e.response?.data?.error||'Failed'); }
+      finally { this.assigning=false; }
+    },
+    async unassign(a) {
+      try {
+        await axios.delete(`${API}/api/admin/profiles/${this.selected.id}/assignments/${a.bidderId}`);
+        await this.openDetail(this.selected);
+      } catch(e){ alert('Failed to unassign'); }
+    },
+    confirmDeleteProfile(p) { this.deleteTarget=p; },
+    async doDeleteProfile() {
+      this.saving=true;
+      try {
+        await axios.delete(`${API}/api/admin/profiles/${this.deleteTarget.id}`);
+        this.deleteTarget=null; this.detailModal=false; this.load(1);
+      } catch(e){ alert(e.response?.data?.error||'Delete failed'); }
+      finally { this.saving=false; }
+    },
+  };
+}
+
+// ── Admin Templates ──────────────────────────────────────────────────────────
+function adminTemplates() {
+  return {
+    items: [], pagination: { page:1, pageSize:20, total:0, totalPages:1 },
+    search: '', loading: false,
+    modal: false, editing: null, saving: false, formError: '',
+    deleteTarget: null,
+    form: { name:'', description:'', config: { theme:{fontFamily:'Inter',layout:'one-col',density:'normal',accentColor:'#2563eb',baseFontSize:11} } },
+
+    // Preview state
+    previewOpen: false, previewTpl: null, previewUrl: '', previewingId: null,
+
+    async init() {
+      this.$watch('$store.app.page', p => { if (p==='admin-templates') this.load(1); });
+      if (Alpine.store('app').page==='admin-templates') this.load(1);
+    },
+
+    /** Inline preview: fetch the PDF blob with auth, then show in an iframe.
+        Using fetch (not just an <iframe src>) because the endpoint requires
+        the bearer token, which we can't attach to a raw iframe URL. */
+    async preview(t) {
+      if (this.previewingId) return;
+      this.previewingId = t.id;
+      try {
+        const res = await _fetchWithAuth(`${API}/api/admin/templates/${t.id}/preview`);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `Preview failed (${res.status})`);
+        }
+        const blob = await res.blob();
+        if (this.previewUrl) URL.revokeObjectURL(this.previewUrl);
+        this.previewUrl = URL.createObjectURL(blob);
+        this.previewTpl = t;
+        this.previewOpen = true;
+      } catch (e) {
+        alert(e.message || 'Preview failed');
+      } finally {
+        this.previewingId = null;
+      }
+    },
+
+    closePreview() {
+      this.previewOpen = false;
+      if (this.previewUrl) { URL.revokeObjectURL(this.previewUrl); this.previewUrl = ''; }
+      this.previewTpl = null;
+    },
+
+    /** Download the sample PDF for a template — same endpoint, ?download=1. */
+    async downloadSample(t) {
+      if (!t) return;
+      try {
+        const res = await _fetchWithAuth(`${API}/api/admin/templates/${t.id}/preview?download=1`);
+        if (!res.ok) throw new Error('Download failed');
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = `${t.name} — sample.pdf`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (e) {
+        alert(e.message || 'Download failed');
+      }
+    },
+    async load(page=1) {
+      this.loading=true;
+      try {
+        const {data} = await axios.get(`${API}/api/admin/templates`,{params:{page,pageSize:20,search:this.search}});
+        this.items=data.data; this.pagination=data.pagination;
+      } catch(e){console.error(e);} finally{this.loading=false;}
+    },
+    openCreate() {
+      this.editing=null;
+      this.form={ name:'', description:'', config:{theme:{fontFamily:'Inter',layout:'one-col',density:'normal',accentColor:'#2563eb',baseFontSize:11}, timeline:false} };
+      this.formError=''; this.modal=true;
+    },
+    openEdit(t) {
+      this.editing=t;
+      const cfg = JSON.parse(JSON.stringify(t.config));
+      if (cfg.timeline === undefined || cfg.timeline === null) cfg.timeline = false;
+      this.form={ name:t.name, description:t.description||'', config: cfg };
+      this.formError=''; this.modal=true;
+    },
+    async save() {
+      if (!this.form.name) return (this.formError='Name required');
+      this.saving=true;
+      try {
+        if (this.editing)
+          await axios.patch(`${API}/api/admin/templates/${this.editing.id}`, this.form);
+        else
+          await axios.post(`${API}/api/admin/templates`, this.form);
+        this.modal=false; this.load(this.pagination.page);
+      } catch(e){ this.formError=e.response?.data?.error||'Save failed'; }
+      finally { this.saving=false; }
+    },
+    confirmDelete(t) { this.deleteTarget=t; },
+    async doDelete() {
+      try {
+        await axios.delete(`${API}/api/admin/templates/${this.deleteTarget.id}`);
+        this.deleteTarget=null; this.load(1);
+      } catch(e){ alert(e.response?.data?.error||'Delete failed'); }
+    },
+  };
+}
+
+// ── Analytics (shared admin + bidder) ─────────────────────────────────────────
+function analyticsPage() {
+  return {
+    dateFrom: '', dateTo: '',
+    data: null, loading: false,
+    chart: null,
+
+    init() {
+      const today = new Date();
+      const sevenAgo = new Date(); sevenAgo.setDate(today.getDate() - 6);
+      this.dateFrom = isoDate(sevenAgo);
+      this.dateTo   = isoDate(today);
+
+      // Trigger first load when this page becomes visible.
+      this.$watch('$store.app.page', p => {
+        if (p === 'admin-analytics' || p === 'bidder-analytics') this.load();
+      });
+      const p = Alpine.store('app').page;
+      if (p === 'admin-analytics' || p === 'bidder-analytics') this.load();
+    },
+
+    setQuick(daysBack) {
+      const today = new Date();
+      const from  = new Date(); from.setDate(today.getDate() - daysBack);
+      this.dateFrom = isoDate(from);
+      this.dateTo   = isoDate(today);
+      this.load();
+    },
+    setMonth() {
+      const today = new Date();
+      this.dateFrom = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
+      this.dateTo   = isoDate(today);
+      this.load();
+    },
+
+    async load() {
+      this.loading = true;
+      try {
+        const isAdmin = Alpine.store('app').user?.role === 'ADMIN';
+        const url = isAdmin
+          ? `${API}/api/admin/analytics/earnings`
+          : `${API}/api/bidder/analytics/earnings`;
+        const { data } = await axios.get(url, {
+          params: { from: this.dateFrom, to: this.dateTo },
+        });
+        this.data = data.data;
+        // Wait a tick so the <canvas> is mounted before drawing.
+        this.$nextTick(() => this.drawChart());
+      } catch (e) {
+        console.error(e);
+        alert(e.response?.data?.error || 'Failed to load analytics');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    drawChart() {
+      const ctx = document.getElementById('analyticsChart');
+      if (!ctx || !this.data) return;
+      if (this.chart) this.chart.destroy();
+      const series = this.data.perDay || [];
+      this.chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: series.map(s => s.date.slice(5)),  // MM-DD
+          datasets: [{
+            label:           'Applications',
+            data:            series.map(s => s.count),
+            backgroundColor: 'rgba(37, 99, 235, 0.7)',
+            borderRadius:    4,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins:   { legend: { display: false } },
+          scales:    { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
+      });
+    },
+  };
+}
+
+// ── Admin Work Logs ───────────────────────────────────────────────────────────
+function adminWorkLogs() {
+  return {
+    // Drill-down mode: 'bidder' (default) or 'profile'.
+    mode: 'bidder',
+    logLevel: 0, loading: false,
+    bidderList: [], profileList: [],
+    folderList: [], logContents: [],
+    selectedBidder: null, selectedProfile: null, selectedDate: null,
+    logTitle: 'Work Logs',
+    openJd: null,
+    downloadingId: null,
+    markingId: null,
+    deleteTarget: null, deleting: false,
+    deleteFolderTarget: null,
+    logStatusFilter: '',
+    durationOf: durationOf,
+    statusLabelOf: statusLabelOf,
+
+    get filteredLogContents() {
+      if (!this.logStatusFilter) return this.logContents;
+      if (this.logStatusFilter === 'not_applied') {
+        const notApplied = new Set(['generated', 'downloaded', 'qa']);
+        return this.logContents.filter(w => notApplied.has(statusLabelOf(this._logRow(w)).key));
+      }
+      return this.logContents.filter(w => {
+        return statusLabelOf(this._logRow(w)).key === this.logStatusFilter;
+      });
+    },
+
+    /** Build a generation-shaped object out of a WorkLog row so statusLabelOf
+        can resolve the badge consistently. */
+    _logRow(w) {
+      const gr = w.generatedResume || {};
+      return {
+        status:         gr.status         || (w.generationStatus || 'PENDING'),
+        progressStatus: gr.progressStatus || null,
+      };
+    },
+
+    /** Whether the admin status dropdown should be shown for this row. */
+    _isEditable(w) {
+      const gr = w.generatedResume;
+      return !!gr && gr.status === 'COMPLETED';
+    },
+
+    /** Dropdown options for admin status change — exclude the current
+        status so the menu only offers transitions. */
+    _statusOptions(w) {
+      const cur = w.generatedResume?.progressStatus || 'GENERATED';
+      const all = [
+        { value: 'GENERATED',   label: 'Generated' },
+        { value: 'DOWNLOADED',  label: 'Downloaded' },
+        { value: 'QA',          label: 'Q & A' },
+        { value: 'APPLIED',     label: 'Applied' },
+        { value: 'INTERVIEWED', label: 'Interviewed' },
+      ];
+      return all.filter(o => o.value !== cur);
+    },
+
+    _folderKey(f) {
+      if (!f) return '';
+      return this.mode === 'profile' ? f.date : f.label;
+    },
+
+    _folderCount(f) {
+      if (!f) return 0;
+      return this.mode === 'profile'
+        ? (f.count || 0)
+        : (f.generationCount ?? f.count ?? 0);
+    },
+
+    _folderName(f) {
+      if (!f) return '';
+      return this.mode === 'profile' ? f.date : f.label;
+    },
+
+    _folderMeta(f) {
+      if (!f) return '';
+      if (this.mode === 'profile') {
+        const count = this._folderCount(f);
+        return count === 1 ? '1 log' : `${count} logs`;
+      }
+      return f.createdAt ? `Created ${fmtDate(f.createdAt)}` : 'No resumes yet';
+    },
+
+    /** Patch the status server-side, then update the local row in-place. */
+    async markStatus(w, target) {
+      if (!target) return;
+      const gid = w.generatedResume?.id;
+      if (!gid || this.markingId) return;
+      this.markingId = w.id;
+      try {
+        const { data } = await axios.patch(
+          `${API}/api/admin/generations/${gid}/status`, { status: target });
+        const updated = data.data;
+        if (w.generatedResume) {
+          w.generatedResume.progressStatus = updated.progressStatus;
+          w.generatedResume.appliedAt      = updated.appliedAt;
+          w.generatedResume.interviewedAt  = updated.interviewedAt;
+        }
+      } catch (e) {
+        alert(e.response?.data?.error || 'Status update failed');
+      } finally {
+        this.markingId = null;
+      }
+    },
+
+    /** Switch between By-Bidder and By-Profile views (only meaningful at level 0). */
+    switchMode(m) {
+      if (this.mode === m) return;
+      this.mode = m;
+      this.logLevel = 0;
+      this.logTitle = 'Work Logs';
+      this.selectedBidder = null;
+      this.selectedProfile = null;
+      if (m === 'bidder') this.loadBidders();
+      else                this.loadProfiles();
+    },
+
+    async loadProfiles() {
+      this.loading = true;
+      try {
+        const {data} = await axios.get(`${API}/api/admin/work-logs/profiles`);
+        this.profileList = data.data;
+      } catch (e) { console.error(e); }
+      finally     { this.loading = false; }
+    },
+
+    async drillProfile(p) {
+      this.selectedProfile = p;
+      this.logLevel = 1;
+      this.logTitle = p.profile.fullName;
+      this.loading = true;
+      try {
+        const {data} = await axios.get(`${API}/api/admin/work-logs/profiles/${p.profile.id}/folders`);
+        this.folderList = data.data;
+      } catch (e) { console.error(e); }
+      finally     { this.loading = false; }
+    },
+
+    /** Workspace deletion — uses the correct endpoint based on current mode. */
+    confirmDeleteFolder(f) { this.deleteFolderTarget = f; },
+    async doDeleteFolder() {
+      if (!this.deleteFolderTarget) return;
+      this.deleting = true;
+      try {
+        const folderKey = this._folderKey(this.deleteFolderTarget);
+        const url  = this.mode === 'profile'
+          ? `${API}/api/admin/work-logs/profiles/${this.selectedProfile.profile.id}/folders/${encodeURIComponent(folderKey)}`
+          : `${API}/api/admin/work-logs/bidders/${this.selectedBidder.bidder.id}/folders/${encodeURIComponent(folderKey)}`;
+        await axios.delete(url);
+        this.folderList = this.folderList.filter(x => this._folderKey(x) !== folderKey);
+        this.deleteFolderTarget = null;
+      } catch (e) {
+        alert(e.response?.data?.error || 'Delete failed');
+      } finally {
+        this.deleting = false;
+      }
+    },
+
+    confirmDeleteLog(w) { this.deleteTarget = w; },
+    async doDeleteLog() {
+      if (!this.deleteTarget) return;
+      this.deleting = true;
+      try {
+        await axios.delete(`${API}/api/admin/work-logs/${this.deleteTarget.id}`);
+        this.logContents = this.logContents.filter(x => x.id !== this.deleteTarget.id);
+        this.deleteTarget = null;
+      } catch (e) {
+        alert(e.response?.data?.error || 'Delete failed');
+      } finally {
+        this.deleting = false;
+      }
+    },
+
+    async downloadResume(w, serialNumber = null) {
+      if (this.downloadingId) return;
+      const genId = w.generatedResume?.id;
+      if (!genId) return;
+      this.downloadingId = w.id;
+      try {
+        await downloadGenerationBundle({
+          apiBase:     `${API}/api/admin/generations/${genId}`,
+          companyName: w.companyName,
+          fullName:    w.profile?.fullName || 'Resume',
+          hasCoverLetter: true,  // admin doesn't know; the cover-letter endpoint 404s gracefully
+          serialNumber,
+        });
+      } catch (e) {
+        console.error(e);
+        alert('Download failed: ' + (e?.message || 'unknown error'));
+      } finally {
+        this.downloadingId = null;
+      }
+    },
+
+    async init() {
+      this.$watch('$store.app.page', p => { if (p==='admin-worklogs') { this.logLevel=0; this.logTitle='Work Logs'; this.loadBidders(); } });
+      if (Alpine.store('app').page==='admin-worklogs') this.loadBidders();
+    },
+    async loadBidders() {
+      this.loading=true;
+      try {
+        const {data} = await axios.get(`${API}/api/admin/work-logs/bidders`);
+        this.bidderList = data.data;
+      } catch(e){console.error(e);} finally{this.loading=false;}
+    },
+    async drillBidder(b) {
+      this.selectedBidder=b; this.logLevel=1;
+      this.logTitle=b.bidder.name; this.loading=true;
+      try {
+        const {data} = await axios.get(`${API}/api/admin/work-logs/bidders/${b.bidder.id}/folders`);
+        this.folderList = data.data;
+      } catch(e){console.error(e);} finally{this.loading=false;}
+    },
+    async drillFolder(f) {
+      const folderKey = this._folderKey(f);
+      this.selectedDate = folderKey; this.logLevel = 2; this.logStatusFilter = '';
+      const label = this.mode === 'profile'
+        ? this.selectedProfile.profile.fullName
+        : this.selectedBidder.bidder.name;
+      this.logTitle = `${label} — ${folderKey}`;
+      this.loading = true;
+      try {
+        const url = this.mode === 'profile'
+          ? `${API}/api/admin/work-logs/profiles/${this.selectedProfile.profile.id}/folders/${encodeURIComponent(folderKey)}`
+          : `${API}/api/admin/work-logs/bidders/${this.selectedBidder.bidder.id}/folders/${encodeURIComponent(folderKey)}`;
+        const {data} = await axios.get(url);
+        this.logContents = data.data;
+      } catch (e) { console.error(e); }
+      finally     { this.loading = false; }
+    },
+    drillUp() {
+      if (this.logLevel === 2) {
+        this.logLevel = 1;
+        this.logTitle = this.mode === 'profile'
+          ? this.selectedProfile.profile.fullName
+          : this.selectedBidder.bidder.name;
+      } else if (this.logLevel === 1) {
+        this.logLevel = 0;
+        this.logTitle = 'Work Logs';
+      }
+    },
+    fmtDate, fmtTime,
+  };
+}
+
+// ── Bidder Dashboard ──────────────────────────────────────────────────────────
+function bidderDashboard() {
+  return {
+    stats: {}, recentGens: [], earnings: null, loaded: false, _interval: null,
+
+    async init() {
+      this.$watch('$store.app.page', p => {
+        if (p==='bidder-dashboard') this._start();
+        else this._stop();
+      });
+      if (Alpine.store('app').page==='bidder-dashboard') this._start();
+    },
+    _start() {
+      this.load();
+      this._stop();
+      this._interval = setInterval(()=>this.pollGens(), 5000);
+    },
+    _stop() { if (this._interval) { clearInterval(this._interval); this._interval=null; } },
+
+    async load() {
+      try {
+        const [pRes, gRes, eRes] = await Promise.all([
+          axios.get(`${API}/api/bidder/profiles`,           { params:{pageSize:100} }),
+          axios.get(`${API}/api/bidder/generations`,        { params:{pageSize:6} }),
+          axios.get(`${API}/api/bidder/analytics/earnings`),
+        ]);
+        this.stats = { profiles: pRes.data.pagination.total, generations: gRes.data.pagination.total };
+        this.recentGens = gRes.data.data;
+        this.earnings   = eRes.data.data;
+        this.loaded = true;
+      } catch(e){ console.error(e); }
+    },
+    /** Silent background poll — no loading flash. */
+    async pollGens() {
+      try {
+        const {data} = await axios.get(`${API}/api/bidder/generations`, { params:{pageSize:6} });
+        this.recentGens = data.data;
+        this.stats.generations = data.pagination.total;
+      } catch{}
+      const anyInFlight = this.recentGens.some(g => g.status==='PENDING' || g.status==='PROCESSING');
+      if (!anyInFlight) this._stop();
+    },
+    viewGen(id) { Alpine.store('app').go('gen-detail-' + id); },
+    fmtTime,
+  };
+}
+
+// ── Bidder Profiles ───────────────────────────────────────────────────────────
+function bidderProfiles() {
+  return {
+    items: [], pagination: { page:1, pageSize:12, total:0, totalPages:1 },
+    search: '', loading: false,
+
+    async init() {
+      this.$watch('$store.app.page', p => { if (p==='bidder-profiles') this.load(1); });
+      if (Alpine.store('app').page==='bidder-profiles') this.load(1);
+    },
+    async load(page=1) {
+      this.loading=true;
+      try {
+        const {data} = await axios.get(`${API}/api/bidder/profiles`, {params:{page,pageSize:12,search:this.search,sort:'recent'}});
+        this.items=data.data; this.pagination=data.pagination;
+      } catch(e){console.error(e);} finally{this.loading=false;}
+    },
+    generateWith(profileId) {
+      Alpine.store('app').go('bidder-folders');
+      window.dispatchEvent(new CustomEvent('open-generate', { detail: { profileId } }));
+    },
+  };
+}
+
+// ── Bidder Folders ────────────────────────────────────────────────────────────
+function bidderFolders() {
+  return {
+    folders: [], loadingFolders: false,
+    activeFolder: null,
+    gens: [], loadingGens: false, _gensLoaded: false, _interval: null,
+    downloadingId: null, _seenCompleted: new Set(),
+    showNewFolder: false, newLabel: '',
+    genModal: false, generating: false, genError: '',
+    myProfiles: [],
+    preferredProfileId: '',
+    genForm: { profileId:'', companyName:'', roleTitle:'', jobLink:'', jobDescription:'' },
+    durationOf: durationOf,
+    fmtTimeShort: fmtTimeShort,
+    statusLabelOf: statusLabelOf,
+
+    // Submitted-Jobs UX state
+    gensQuery: '', gensSort: 'newest', gensStatus: '', openRowId: null,
+
+    get filteredGens() {
+      const q = (this.gensQuery || '').toLowerCase().trim();
+      let list = this.gens.slice();
+      if (q) {
+        list = list.filter(g =>
+          (g.roleTitle || '').toLowerCase().includes(q) ||
+          (g.companyName || '').toLowerCase().includes(q) ||
+          (g.profile?.fullName || '').toLowerCase().includes(q) ||
+          (g.jobDescription || '').toLowerCase().includes(q)
+        );
+      }
+      if (this.gensStatus === 'NOT_APPLIED') {
+        const notApplied = new Set(['GENERATED', 'DOWNLOADED', 'QA']);
+        list = list.filter(g => {
+          if ((g.status || '').toUpperCase() !== 'COMPLETED') return false;
+          const ps = (g.progressStatus || 'GENERATED').toUpperCase();
+          return notApplied.has(ps);
+        });
+      } else if (this.gensStatus) {
+        list = list.filter(g => (g.status || '').toUpperCase() === this.gensStatus);
+      }
+      switch (this.gensSort) {
+        case 'oldest':  list.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt)); break;
+        case 'title':   list.sort((a,b) => (a.roleTitle  ||'').localeCompare(b.roleTitle  ||'')); break;
+        case 'company': list.sort((a,b) => (a.companyName||'').localeCompare(b.companyName||'')); break;
+        default:        list.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)); break;
+      }
+      return list;
+    },
+
+    _defaultProfileId(preferredId = '') {
+      if (preferredId && this.myProfiles.some(p => p.id === preferredId)) return preferredId;
+      return this.myProfiles.length ? this.myProfiles[0].id : '';
+    },
+
+    _ensureProfileSelection(preferredId = this.preferredProfileId) {
+      const currentId = this.genForm.profileId || '';
+      const currentExists = currentId && this.myProfiles.some(p => p.id === currentId);
+      if (currentExists && !preferredId) return;
+      this.genForm.profileId = this._defaultProfileId(preferredId);
+    },
+
+    toggleRow(id) { this.openRowId = (this.openRowId === id) ? null : id; },
+
+    async init() {
+      this.$watch('$store.app.page', p => {
+        if (p==='bidder-folders') {
+          this.loadFolders();
+          this.loadMyProfiles();
+        }
+        else this._stopPolling();
+      });
+      this.$watch('myProfiles', () => {
+        if (this.genModal) this._ensureProfileSelection();
+      });
+      this.$watch('genModal', open => {
+        if (open) this.$nextTick(() => this._ensureProfileSelection());
+      });
+      if (Alpine.store('app').page==='bidder-folders') {
+        this.loadFolders();
+        this.loadMyProfiles();
+      }
+      window.addEventListener('open-generate', (e) => this.openGenerate(e?.detail?.profileId || ''));
+    },
+    _stopPolling() { if (this._interval) { clearInterval(this._interval); this._interval=null; } },
+
+    async loadMyProfiles() {
+      try {
+        const {data} = await axios.get(`${API}/api/bidder/profiles`, {params:{pageSize:100,sort:'recent'}});
+        this.myProfiles = Array.isArray(data.data) ? data.data : [];
+      } catch {
+        this.myProfiles = [];
+      }
+    },
+
+    async loadFolders() {
+      this.loadingFolders=true;
+      try {
+        const {data} = await axios.get(`${API}/api/bidder/folders`);
+        this.folders = data.data;
+      } catch(e){console.error(e);} finally{this.loadingFolders=false;}
+    },
+    async openFolder(label) {
+      this.activeFolder = label;
+      this._gensLoaded  = false;
+      this.gens = [];
+      this._seenCompleted = new Set();
+      await this.loadGens();
+      this._stopPolling();
+      this._interval = setInterval(()=>this.pollGens(), 4000);
+    },
+
+    /** First-time / explicit load — shows the loading row. */
+    async loadGens() {
+      this.loadingGens = true;
+      try {
+        const {data} = await axios.get(
+          `${API}/api/bidder/folders/${encodeURIComponent(this.activeFolder)}/generations`
+        );
+        this.gens = data.data;
+        this._gensLoaded = true;
+        // Pre-populate so already-completed gens on first load are NOT auto-downloaded.
+        this.gens.forEach(g => { if (g.status === 'COMPLETED') this._seenCompleted.add(g.id); });
+      } catch(e){ console.error(e); }
+      finally { this.loadingGens = false; }
+    },
+
+    /** Background poll — silent: no loading spinner, no row flicker. */
+    async pollGens() {
+      if (!this.activeFolder) return;
+      try {
+        const {data} = await axios.get(
+          `${API}/api/bidder/folders/${encodeURIComponent(this.activeFolder)}/generations`
+        );
+        this.gens = data.data;
+      } catch{ /* ignore transient errors */ }
+
+      // Auto-download any generation that just became COMPLETED this poll cycle.
+      for (const g of this.gens) {
+        if (g.status === 'COMPLETED' && !this._seenCompleted.has(g.id)) {
+          this._seenCompleted.add(g.id);
+          this.download(g);
+        }
+      }
+
+      // Stop polling once every generation is in a terminal state.
+      const anyInFlight = this.gens.some(g => g.status==='PENDING' || g.status==='PROCESSING');
+      if (!anyInFlight) this._stopPolling();
+    },
+
+    createFolder() { this.showNewFolder=true; this.newLabel=''; },
+    async doCreateFolder() {
+      try {
+        await axios.post(`${API}/api/bidder/folders`, { label: this.newLabel || undefined });
+        this.showNewFolder=false; this.loadFolders();
+      } catch(e){ alert(e.response?.data?.error||'Failed'); }
+    },
+    async openGenerate(preferredProfileId='') {
+      this.preferredProfileId = preferredProfileId || '';
+      await this.loadMyProfiles();
+      this.genForm = {
+        profileId: '',
+        companyName:'',
+        roleTitle:'',
+        jobLink:'',
+        jobDescription:''
+      };
+      this._ensureProfileSelection();
+      this.genError=''; this.genModal=true;
+      this.$nextTick(() => this._ensureProfileSelection());
+    },
+    async regenerateFrom(g) {
+      await this.loadMyProfiles();
+      this.genForm = {
+        profileId:      g.profile?.id || g.profileId || '',
+        companyName:    g.companyName || '',
+        roleTitle:      g.roleTitle || '',
+        jobLink:        g.jobLink || '',
+        jobDescription: g.jobDescription || '',
+      };
+      this.genError = ''; this.genModal = true;
+      this.$nextTick(() => this._ensureProfileSelection());
+    },
+    async submitGenerate() {
+      if (!this.genForm.profileId||!this.genForm.companyName||!this.genForm.roleTitle||!this.genForm.jobDescription)
+        return (this.genError='All fields required');
+      this.generating=true; this.genError='';
+      try {
+        const label = this.activeFolder || new Date().toISOString().slice(0,10);
+        if (!this.activeFolder) {
+          await axios.post(`${API}/api/bidder/folders`, { label });
+          this.activeFolder = label;
+        }
+        await axios.post(`${API}/api/bidder/generations`, { ...this.genForm, label });
+        this.genModal=false;
+        await this.loadGens();
+        // resume polling since a new pending gen exists
+        this._stopPolling();
+        this._interval = setInterval(()=>this.pollGens(), 4000);
+      } catch(e){ this.genError = e.response?.data?.error||'Generation failed'; }
+      finally { this.generating=false; }
+    },
+
+    /**
+     * Folder-aware download. Two paths:
+     *   1. Secure context (HTTPS/localhost) + Chromium → showDirectoryPicker,
+     *      writes `{Company}/{Full Name}.pdf` +
+     *      `{Company}/{Full Name} Cover Letter.pdf` directly.
+     *   2. Anywhere else → fetches a server-built `{Company}.zip` containing the
+     *      same folder structure; the user extracts the ZIP and gets the folder.
+     */
+    async download(gen, serialNumber = null) {
+      if (this.downloadingId) return;
+      this.downloadingId = gen.id;
+      try {
+        await downloadGenerationBundle({
+          apiBase:     `${API}/api/bidder/generations/${gen.id}`,
+          companyName: gen.companyName,
+          fullName:    gen.profile?.fullName || 'Resume',
+          hasCoverLetter: !!gen.hasCoverLetter,
+          serialNumber,
+        });
+      } catch (e) {
+        console.error(e);
+        alert('Download failed: ' + (e?.message || 'unknown error'));
+      } finally {
+        this.downloadingId = null;
+      }
+    },
+
+    fmtTime,
+  };
+}
+
+// ── Download helper ─────────────────────────────────────────────────────────
+//
+// Two paths:
+//   1. **Directory picker** (requires secure context — HTTPS or localhost on
+//      Chromium): prompts for a parent folder, writes the two PDFs directly
+//      into a `{Company}/` subfolder, no `.crdownload` artefacts.
+//   2. **Server ZIP fallback** (anywhere else, incl. plain HTTP): asks the
+//      server for `{Company}.zip` already shaped like
+//      `{Company}/{Full Name}.pdf` + `{Company}/{Full Name} Cover Letter.pdf`, then
+//      streams it to the browser as a single attachment. The user extracts
+//      the ZIP and gets the exact folder layout we promise.
+//
+const _FS_INVALID = /[\\\/:*?"<>|\x00-\x1f]/g;
+function _sanitizeName(name, fallback) {
+  const cleaned = (name||'').replace(_FS_INVALID, ' ').replace(/\s+/g, ' ').trim().slice(0,80);
+  return cleaned || fallback;
+}
+
+function _bundleFolderName(companyName, serialNumber) {
+  const company = _sanitizeName(companyName, 'Company');
+  const serial = Number.parseInt(serialNumber, 10);
+  if (Number.isFinite(serial) && serial > 0) {
+    return _sanitizeName(`${serial}_${company}`, company);
+  }
+  return company;
+}
+
+function _authHeaders() {
+  const t = localStorage.getItem('rt_access');
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
+async function _refreshAccessToken() {
+  const rt = localStorage.getItem('rt_refresh');
+  if (!rt) {
+    const err = new Error('Session expired');
+    err.code = 'AUTH_EXPIRED';
+    throw err;
+  }
+
+  const res = await fetch(`${API}/api/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken: rt }),
+  });
+
+  if (!res.ok) {
+    const err = new Error('Session expired');
+    err.code = 'AUTH_EXPIRED';
+    throw err;
+  }
+
+  const data = await res.json();
+  localStorage.setItem('rt_access', data.accessToken);
+  localStorage.setItem('rt_refresh', data.refreshToken);
+  return data.accessToken;
+}
+
+async function _fetchWithAuth(url, options = {}, retry = true) {
+  const headers = { ...(options.headers || {}) };
+  const token = localStorage.getItem('rt_access');
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  let res = await fetch(url, { ...options, headers });
+  if (res.status !== 401 || !retry) return res;
+
+  try {
+    const freshToken = await _refreshAccessToken();
+    const retryHeaders = { ...headers, Authorization: `Bearer ${freshToken}` };
+    return await fetch(url, { ...options, headers: retryHeaders });
+  } catch (err) {
+    localStorage.clear();
+    window.location.href = '/login';
+    const authErr = new Error('Session expired');
+    authErr.code = 'AUTH_EXPIRED';
+    throw authErr;
+  }
+}
+
+function _isFsStateError(err) {
+  const msg = String(err?.message || '').toLowerCase();
+  return err?.name === 'InvalidStateError'
+      || msg.includes('state cached in an interface object')
+      || msg.includes('read from disk');
+}
+
+// ── Admin Job Tracker ────────────────────────────────────────────────────────
+function adminJobTracker() {
+  return {
+    level: 0,
+    loading: false,
+    profiles: [],
+    selectedProfile: null,
+    jobs: [],
+    companySearch: '',
+    statusFilter: '',
+    _searchTimer: null,
+    openJd: null,
+    downloadingId: null,
+    durationOf: durationOf,
+    statusLabelOf: statusLabelOf,
+
+    get filteredJobs() {
+      if (!this.statusFilter) return this.jobs;
+      if (this.statusFilter === 'not_applied') {
+        const notApplied = new Set(['generated', 'downloaded', 'qa']);
+        return this.jobs.filter(w => notApplied.has(statusLabelOf(this._logRow(w)).key));
+      }
+      return this.jobs.filter(w => statusLabelOf(this._logRow(w)).key === this.statusFilter);
+    },
+
+    _logRow(w) {
+      const gr = w.generatedResume || {};
+      return {
+        status:         gr.status         || (w.generationStatus || 'PENDING'),
+        progressStatus: gr.progressStatus || null,
+      };
+    },
+
+    async init() {
+      this.$watch('$store.app.page', p => { if (p === 'admin-jobtracker') this.loadProfiles(); });
+      if (Alpine.store('app').page === 'admin-jobtracker') this.loadProfiles();
+    },
+
+    async loadProfiles() {
+      this.loading = true;
+      try {
+        const { data } = await axios.get(`${API}/api/admin/work-logs/profiles`);
+        this.profiles = data.data;
+      } catch(e) { console.error(e); }
+      finally { this.loading = false; }
+    },
+
+    async drillProfile(p) {
+      this.selectedProfile = p;
+      this.level = 1;
+      this.companySearch = '';
+      this.statusFilter = '';
+      await this.loadJobs();
+    },
+
+    async loadJobs() {
+      this.loading = true;
+      try {
+        const { data } = await axios.get(
+          `${API}/api/admin/work-logs/profiles/${this.selectedProfile.profile.id}/jobs`,
+          { params: this.companySearch ? { company: this.companySearch } : {} }
+        );
+        this.jobs = data.data;
+      } catch(e) { console.error(e); }
+      finally { this.loading = false; }
+    },
+
+    onSearchInput() {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = setTimeout(() => this.loadJobs(), 350);
+    },
+
+    goBack() {
+      this.level = 0;
+      this.selectedProfile = null;
+      this.jobs = [];
+    },
+
+    async downloadResume(w, serialNumber = null) {
+      if (this.downloadingId) return;
+      const genId = w.generatedResume?.id;
+      if (!genId) return;
+      this.downloadingId = w.id;
+      try {
+        await downloadGenerationBundle({
+          apiBase:        `${API}/api/admin/generations/${genId}`,
+          companyName:    w.companyName,
+          fullName:       w.bidder?.name || this.selectedProfile?.profile?.fullName || 'Resume',
+          hasCoverLetter: true,
+          serialNumber,
+        });
+      } catch (e) {
+        console.error(e);
+        alert('Download failed: ' + (e?.message || 'unknown error'));
+      } finally {
+        this.downloadingId = null;
+      }
+    },
+  };
+}
+
+async function downloadGenerationBundle({ apiBase, companyName, fullName, hasCoverLetter, serialNumber = null }) {
+  const folderName = _bundleFolderName(companyName, serialNumber);
+  // Path 1 — direct write into a user-picked folder.
+  if (window.isSecureContext && typeof window.showDirectoryPicker === 'function') {
+    let parent;
+    try {
+      parent = await window.showDirectoryPicker({ mode: 'readwrite' });
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;          // user cancelled
+      console.warn('directory picker failed, falling back to ZIP:', err);
+      parent = null;
+    }
+    if (parent) {
+      const person  = _sanitizeName(fullName,    'Resume');
+      const write = async (filename, blob) => {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const dir = await parent.getDirectoryHandle(folderName, { create: true });
+            const fh = await dir.getFileHandle(filename, { create: true });
+            const w  = await fh.createWritable();
+            await w.write(blob);
+            await w.close();
+            return;
+          } catch (err) {
+            if (!_isFsStateError(err) || attempt === 1) throw err;
+          }
+        }
+      };
+
+      try {
+        const rRes = await _fetchWithAuth(`${apiBase}/download`);
+        if (!rRes.ok) throw new Error(`Resume fetch failed (${rRes.status})`);
+        const resumeBlob = await rRes.blob();
+
+        let coverBlob = null;
+        if (hasCoverLetter) {
+          const cRes = await _fetchWithAuth(`${apiBase}/cover-letter/download`);
+          if (cRes.ok) {
+            coverBlob = await cRes.blob();
+          } else if (cRes.status !== 404) {
+            throw new Error(`Cover letter fetch failed (${cRes.status})`);
+          }
+        }
+
+        await write(`${person}.pdf`, resumeBlob);
+        if (coverBlob) await write(`${person} Cover Letter.pdf`, coverBlob);
+        return;
+      } catch (err) {
+        if (err?.code === 'AUTH_EXPIRED') return;
+        console.warn('direct folder write failed, falling back to ZIP:', err);
+      }
+    }
+  }
+
+  // Path 2 — server-built ZIP. Single attachment, no `.crdownload` issues.
+  const zipUrl = new URL(`${apiBase}/zip`, window.location.href);
+  zipUrl.searchParams.set('folderName', folderName);
+  const zRes = await _fetchWithAuth(zipUrl.toString());
+  if (!zRes.ok) throw new Error(`ZIP fetch failed (${zRes.status})`);
+  const blob = await zRes.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${folderName}.zip`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+</script>
+</body>
+</html>
