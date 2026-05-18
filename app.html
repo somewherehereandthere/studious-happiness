@@ -1686,6 +1686,17 @@
           <h1 class="section-title" x-text="activeFolder ? activeFolder : 'Workspaces'"></h1>
         </div>
         <div class="flex items-center gap-2">
+          <template x-if="activeFolder && _dirPickerSupported">
+            <button @click="pickDownloadFolder()"
+                    :title="_dirHandle ? 'Download folder: ' + (_dirHandle.name || '…') : 'Pick folder for auto-downloads'"
+                    :class="_dirHandle ? 'btn-secondary text-green-600 border-green-300' : 'btn-secondary'">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+              </svg>
+              <span x-text="_dirHandle ? _dirHandle.name : 'Set folder'"></span>
+            </button>
+          </template>
           <template x-if="activeFolder">
             <button @click="openGenerate()" class="btn-primary">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3306,6 +3317,8 @@ function bidderFolders() {
     activeFolder: null,
     gens: [], loadingGens: false, _gensLoaded: false, _interval: null,
     downloadingId: null, _seenCompleted: new Set(),
+    _dirHandle: null,
+    _dirPickerSupported: window.isSecureContext && typeof window.showDirectoryPicker === 'function',
     showNewFolder: false, newLabel: '',
     genModal: false, generating: false, genError: '',
     myProfiles: [],
@@ -3509,17 +3522,29 @@ function bidderFolders() {
      *   2. Anywhere else → fetches a server-built `{Company}.zip` containing the
      *      same folder structure; the user extracts the ZIP and gets the folder.
      */
+    async pickDownloadFolder() {
+      if (!this._dirPickerSupported) return;
+      try {
+        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        this._dirHandle = handle;
+      } catch (err) {
+        if (err?.name !== 'AbortError') console.warn('Directory picker error:', err);
+      }
+    },
+
     async download(gen, serialNumber = null) {
       if (this.downloadingId) return;
       this.downloadingId = gen.id;
       try {
-        await downloadGenerationBundle({
+        const { dirHandle } = await downloadGenerationBundle({
           apiBase:     `${API}/api/bidder/generations/${gen.id}`,
           companyName: gen.companyName,
           fullName:    gen.profile?.fullName || 'Resume',
           hasCoverLetter: !!gen.hasCoverLetter,
           serialNumber,
+          dirHandle:   this._dirHandle,
         });
+        if (dirHandle) this._dirHandle = dirHandle;
       } catch (e) {
         console.error(e);
         alert('Download failed: ' + (e?.message || 'unknown error'));
@@ -3719,20 +3744,22 @@ function adminJobTracker() {
   };
 }
 
-async function downloadGenerationBundle({ apiBase, companyName, fullName, hasCoverLetter, serialNumber = null }) {
+async function downloadGenerationBundle({ apiBase, companyName, fullName, hasCoverLetter, serialNumber = null, dirHandle = null }) {
   const folderName = _bundleFolderName(companyName, serialNumber);
-  // Path 1 — direct write into a user-picked folder.
+  // Path 1 — direct write into a folder (pre-selected or user-picked).
   if (window.isSecureContext && typeof window.showDirectoryPicker === 'function') {
-    let parent;
-    try {
-      parent = await window.showDirectoryPicker({ mode: 'readwrite' });
-    } catch (err) {
-      if (err && err.name === 'AbortError') return;          // user cancelled
-      console.warn('directory picker failed, falling back to ZIP:', err);
-      parent = null;
+    let parent = dirHandle;  // reuse stored handle (works without user gesture)
+    if (!parent) {
+      try {
+        parent = await window.showDirectoryPicker({ mode: 'readwrite' });
+      } catch (err) {
+        if (err && err.name === 'AbortError') return { dirHandle: null };
+        console.warn('directory picker failed, falling back to ZIP:', err);
+        parent = null;
+      }
     }
     if (parent) {
-      const person  = _sanitizeName(fullName,    'Resume');
+      const person = _sanitizeName(fullName, 'Resume');
       const write = async (filename, blob) => {
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
@@ -3765,9 +3792,9 @@ async function downloadGenerationBundle({ apiBase, companyName, fullName, hasCov
 
         await write(`${person}.pdf`, resumeBlob);
         if (coverBlob) await write(`${person} Cover Letter.pdf`, coverBlob);
-        return;
+        return { dirHandle: parent };
       } catch (err) {
-        if (err?.code === 'AUTH_EXPIRED') return;
+        if (err?.code === 'AUTH_EXPIRED') return { dirHandle: null };
         console.warn('direct folder write failed, falling back to ZIP:', err);
       }
     }
@@ -3784,6 +3811,7 @@ async function downloadGenerationBundle({ apiBase, companyName, fullName, hasCov
   a.href = url; a.download = `${folderName}.zip`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return { dirHandle: null };
 }
 </script>
 </body>
