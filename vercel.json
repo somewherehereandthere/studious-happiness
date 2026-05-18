@@ -1,11 +1,13 @@
 {
+  "cleanUrls": true,
   "redirects": [
-    { "source": "/", "destination": "/login", "permanent": false }
+    { "source": "/",      "destination": "/login", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/app",           "destination": "/index.html" },
-    { "source": "/app/:path*",    "destination": "/index.html" },
-    { "source": "/admin",         "destination": "/index.html" },
-    { "source": "/admin/:path*",  "destination": "/index.html" }
+    { "source": "/login",          "destination": "/login.html" },
+    { "source": "/app",            "destination": "/index.html" },
+    { "source": "/app/:path*",     "destination": "/index.html" },
+    { "source": "/admin",          "destination": "/index.html" },
+    { "source": "/admin/:path*",   "destination": "/index.html" }
   ]
 }
