@@ -3452,7 +3452,8 @@ function bidderFolders() {
       for (const g of this.gens) {
         if (g.status === 'COMPLETED' && !this._seenCompleted.has(g.id)) {
           this._seenCompleted.add(g.id);
-          this.download(g);
+          const _idx = this.filteredGens.findIndex(x => x.id === g.id);
+          this.download(g, _idx >= 0 ? this.filteredGens.length - _idx : null);
         }
       }
 
