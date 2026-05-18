@@ -1,50 +1,42 @@
-export const config = { runtime: 'edge' };
+// Node.js serverless proxy — forwards /api/* to BACKEND_URL
+const DROP = new Set(['host', 'connection', 'transfer-encoding', 'upgrade', 'keep-alive', 'content-length']);
 
-export default async function handler(req) {
+module.exports = async function handler(req, res) {
   const backend = process.env.BACKEND_URL;
   if (!backend) {
-    return new Response(JSON.stringify({ error: 'BACKEND_URL not configured' }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-    });
+    console.error('BACKEND_URL env var not set');
+    return res.status(500).json({ error: 'BACKEND_URL not configured' });
   }
 
-  const url = new URL(req.url);
-  const targetUrl = backend.replace(/\/$/, '') + url.pathname + url.search;
+  const target = backend.replace(/\/$/, '') + req.url;
+  console.log(`[proxy] ${req.method} ${req.url} → ${target}`);
 
-  // Forward headers, dropping hop-by-hop headers
+  // Forward headers, dropping hop-by-hop
   const headers = {};
-  const hopByHop = new Set(['host', 'connection', 'transfer-encoding', 'upgrade', 'keep-alive', 'proxy-authorization', 'te', 'trailers']);
-  for (const [k, v] of req.headers.entries()) {
-    if (!hopByHop.has(k.toLowerCase())) {
-      headers[k] = v;
-    }
+  for (const [k, v] of Object.entries(req.headers || {})) {
+    if (!DROP.has(k.toLowerCase())) headers[k] = v;
   }
 
-  const fetchInit = { method: req.method, headers };
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    fetchInit.body = req.body;
+  const init = { method: req.method, headers };
+
+  // Re-serialize body (Vercel auto-parses JSON into req.body)
+  if (req.body != null && req.method !== 'GET' && req.method !== 'HEAD') {
+    init.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
   }
 
   try {
-    const res = await fetch(targetUrl, fetchInit);
+    const upstream = await fetch(target, init);
 
-    const resHeaders = {};
-    const dropRes = new Set(['connection', 'transfer-encoding', 'keep-alive']);
-    for (const [k, v] of res.headers.entries()) {
-      if (!dropRes.has(k.toLowerCase())) {
-        resHeaders[k] = v;
-      }
+    res.status(upstream.status);
+    for (const [k, v] of upstream.headers.entries()) {
+      if (!DROP.has(k.toLowerCase())) res.setHeader(k, v);
     }
 
-    return new Response(res.body, {
-      status: res.status,
-      headers: resHeaders,
-    });
+    // Use arrayBuffer so binary responses (PDF downloads) are preserved
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.send(buf);
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'Proxy error', detail: err.message }), {
-      status: 502,
-      headers: { 'content-type': 'application/json' },
-    });
+    console.error('[proxy] fetch error:', err.message);
+    res.status(502).json({ error: 'Proxy error', detail: err.message });
   }
-}
+};
