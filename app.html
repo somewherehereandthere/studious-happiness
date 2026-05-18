@@ -1698,7 +1698,10 @@
             </button>
           </template>
           <template x-if="activeFolder">
-            <button @click="openGenerate()" class="btn-primary">
+            <button @click="openGenerate()"
+                    :disabled="_dirPickerSupported && !_dirHandle"
+                    :title="_dirPickerSupported && !_dirHandle ? 'Set a download folder first' : ''"
+                    class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
               </svg>
@@ -3496,6 +3499,8 @@ function bidderFolders() {
       this.$nextTick(() => this._ensureProfileSelection());
     },
     async submitGenerate() {
+      if (this._dirPickerSupported && !this._dirHandle)
+        return (this.genError='Set a download folder before generating');
       if (!this.genForm.profileId||!this.genForm.companyName||!this.genForm.roleTitle||!this.genForm.jobDescription)
         return (this.genError='All fields required');
       this.generating=true; this.genError='';
